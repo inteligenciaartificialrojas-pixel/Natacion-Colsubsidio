@@ -1,0 +1,53 @@
+{
+  "project": "Natacion_Colsubsidio_Checker",
+  "description": "Revisor automático periódico de la disponibilidad de práctica libre de natación en Colsubsidio con alertas en Telegram.",
+  "rules": {
+    "one_feature_at_a_time": true,
+    "require_tests_to_close": true,
+    "require_approved_spec_to_implement": true,
+    "valid_status": ["pending", "spec_ready", "in_progress", "done", "blocked"],
+    "sdd_required_when": "feature has \"sdd\": true"
+  },
+  "features": [
+    {
+      "id": 1,
+      "name": "telegram_notifier",
+      "title": "Feature 1: Notificador de Telegram",
+      "description": "Módulo que envía mensajes formateados en Markdown a través de la API de bots de Telegram y maneja control de duplicación de alertas.",
+      "acceptance": [
+        "Envía un mensaje de alerta a un Chat ID específico usando un Token de Bot de Telegram.",
+        "Maneja excepciones de red y de API (ej: token inválido) de forma limpia sin colapsar el programa.",
+        "Implementa un filtro para no enviar el mismo mensaje (misma sede, fecha, hora y cupos) más de una vez en un intervalo de 1 hora."
+      ],
+      "sdd": true,
+      "status": "done"
+    },
+    {
+      "id": 2,
+      "name": "colsubsidio_scraper",
+      "title": "Feature 2: Scraper de Colsubsidio por API",
+      "description": "Módulo que realiza consultas HTTP a los endpoints de la Tienda de Diversión Colsubsidio para extraer los horarios y cupos libres.",
+      "acceptance": [
+        "Realiza peticiones HTTP (mediante httpx o requests) simulando los headers correctos de navegador.",
+        "Obtiene y procesa la estructura JSON de respuesta para extraer: sede, fecha, hora, tarifa/categoría y cupos disponibles.",
+        "Funciona sin necesidad de levantar un navegador completo si la API lo permite, o maneja cookies y tokens de sesión de manera transparente."
+      ],
+      "sdd": true,
+      "status": "done"
+    },
+    {
+      "id": 3,
+      "name": "monitor_orchestrator",
+      "title": "Feature 3: Orquestador y Filtros de Monitoreo",
+      "description": "Orquestador del loop periódico de monitoreo que aplica las reglas de filtrado de sedes (El Cubo, Plaza Américas) y horarios (L-V 6-8 PM, S-D libre) antes de enviar alertas.",
+      "acceptance": [
+        "Ejecuta el ciclo de revisión periódicamente en base a un intervalo configurable (ej: cada 5 minutos).",
+        "Filtra los cupos disponibles de modo que solo alerte si la sede es 'El Cubo' o 'Plaza Américas' (o 'Club Plaza Américas').",
+        "Aplica filtros de horario: de lunes a viernes solo alerta si la hora de la sesión está entre las 6:00 PM y 8:00 PM (inclusive); los sábados y domingos alerta para cualquier horario.",
+        "Lanza la alerta a Telegram si hay cupos que cumplen los filtros anteriores y no han sido notificados recientemente."
+      ],
+      "sdd": true,
+      "status": "done"
+    }
+  ]
+}

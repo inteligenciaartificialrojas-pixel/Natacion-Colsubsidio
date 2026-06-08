@@ -1,0 +1,17 @@
+# Credentials and configuration
+.env
+
+# Python env
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+ENV/
+
+# IDE and System Files
+.vscode/
+.idea/
+.DS_Store
+*.tmp

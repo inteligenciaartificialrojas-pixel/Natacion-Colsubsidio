@@ -1,0 +1,16 @@
+[
+  {
+    "ID_Registro": 200,
+    "Hash_Registro": "hash456",
+    "Texto_Original": "CAJA CON INHALADOR CON 200 DOSIS",
+    "Forma_Farmaceutica": "AEROSOL",
+    "Via_Administracion": "INHALATORIA",
+    "Previa_UMD": "DOSIS",
+    "Previa_Cantidad": "200",
+    "Previa_Presentacion": "CAJA",
+    "Previa_Volumen": "0",
+    "Previa_Unidad_Volumen": "NO APLICA",
+    "PQS": 20.0,
+    "Alerta_Clinica": "UMD no estándar | Falta Unidad de Volumen | UMD prohíbe el término 'DOSIS'"
+  }
+]

@@ -1,0 +1,182 @@
+2026-06-02 08:34:20,378 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 08:34:23,148 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 08:34:25,936 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 08:34:29,691 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:34:29,692 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:34:32,636 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:34:32,636 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:34:35,579 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:34:35,579 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:34:38,520 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:34:38,520 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:34:38,526 - BITS_Pipeline - INFO - [NLP] Bypass de validación humana (HITL) inyectado exitosamente.
+2026-06-02 08:34:38,526 - BITS_Pipeline - INFO - [NLP] Lote actual 100% consistente. Omitiendo bucle de auto-mejora.
+2026-06-02 08:34:38,533 - BITS_Pipeline - INFO - [NLP] Auditoría de lote exportada en: data/output/posologia_batch_audit.json (1 registros)
+2026-06-02 08:34:42,977 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:34:42,977 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:34:42,980 - BITS_Pipeline - INFO - [NLP] Iniciando bucle de auto-mejora para 1 registros anómalos (max_iter=1)...
+2026-06-02 08:34:42,980 - BITS_Pipeline - INFO - [NLP] Auto-mejora iteración 1 de 1 (Filas anómalas: 1)
+2026-06-02 08:34:42,983 - BITS_Pipeline - INFO - [NLP] Auto-curación exitosa en fila 0: PQS mejoró de 20.0% a 100.0% (Justificación: OK)
+2026-06-02 08:34:42,994 - BITS_Pipeline - INFO - [NLP] Auditoría de lote exportada en: data/output/posologia_batch_audit.json (1 registros)
+2026-06-02 08:34:43,006 - BITS_Pipeline - INFO - [PBS] Ejecutando Auditoría por Jerarquía ATC...
+2026-06-02 08:34:43,013 - BITS_Pipeline - INFO - [PBS] Ejecutando Match Fuzzy con Anexo DCI...
+2026-06-02 08:34:43,019 - BITS_Pipeline - INFO - [PBS] Ejecutando Cruce contra POS Populi...
+2026-06-02 08:34:43,021 - BITS_Pipeline - INFO - [PBS] Aplicando Diccionario de Sinónimos...
+2026-06-02 08:34:43,071 - BITS_Pipeline - INFO - [PBS] Aplicando Ajustes Manuales de Seguimiento...
+2026-06-02 08:34:43,079 - BITS_Pipeline - INFO - [PBS] Ajustes manuales aplicados.
+2026-06-02 08:41:33,209 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 08:41:36,670 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 08:41:40,036 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 08:41:44,441 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:41:44,442 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:41:47,763 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:41:47,764 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:41:50,788 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:41:50,789 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:41:53,735 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:41:53,736 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:41:53,742 - BITS_Pipeline - INFO - [NLP] Bypass de validación humana (HITL) inyectado exitosamente.
+2026-06-02 08:41:53,743 - BITS_Pipeline - INFO - [NLP] Lote actual 100% consistente. Omitiendo bucle de auto-mejora.
+2026-06-02 08:41:53,747 - BITS_Pipeline - INFO - [NLP] Auditoría de lote exportada en: data/output/posologia_batch_audit.json (1 registros)
+2026-06-02 08:41:58,290 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:41:58,291 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:41:58,293 - BITS_Pipeline - INFO - [NLP] Iniciando bucle de auto-mejora para 1 registros anómalos (max_iter=1)...
+2026-06-02 08:41:58,293 - BITS_Pipeline - INFO - [NLP] Auto-mejora iteración 1 de 1 (Filas anómalas: 1)
+2026-06-02 08:41:58,295 - BITS_Pipeline - INFO - [NLP] Auto-curación exitosa en fila 0: PQS mejoró de 20.0% a 100.0% (Justificación: OK)
+2026-06-02 08:41:58,318 - BITS_Pipeline - INFO - [NLP] Auditoría de lote exportada en: data/output/posologia_batch_audit.json (1 registros)
+2026-06-02 08:41:58,326 - BITS_Pipeline - INFO - [PBS] Ejecutando Auditoría por Jerarquía ATC...
+2026-06-02 08:41:58,333 - BITS_Pipeline - INFO - [PBS] Ejecutando Match Fuzzy con Anexo DCI...
+2026-06-02 08:41:58,339 - BITS_Pipeline - INFO - [PBS] Ejecutando Cruce contra POS Populi...
+2026-06-02 08:41:58,342 - BITS_Pipeline - INFO - [PBS] Aplicando Diccionario de Sinónimos...
+2026-06-02 08:41:58,387 - BITS_Pipeline - INFO - [PBS] Aplicando Ajustes Manuales de Seguimiento...
+2026-06-02 08:41:58,393 - BITS_Pipeline - INFO - [PBS] Ajustes manuales aplicados.
+2026-06-02 08:42:38,323 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 08:42:41,122 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 08:42:44,009 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 08:42:47,747 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:42:47,747 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:42:50,727 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:42:50,728 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:42:53,676 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:42:53,676 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:42:56,654 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:42:56,655 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:42:56,663 - BITS_Pipeline - INFO - [NLP] Bypass de validación humana (HITL) inyectado exitosamente.
+2026-06-02 08:42:56,664 - BITS_Pipeline - INFO - [NLP] Lote actual 100% consistente. Omitiendo bucle de auto-mejora.
+2026-06-02 08:42:56,670 - BITS_Pipeline - INFO - [NLP] Auditoría de lote exportada en: data/output/posologia_batch_audit.json (1 registros)
+2026-06-02 08:43:01,003 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:43:01,004 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:43:01,007 - BITS_Pipeline - INFO - [NLP] Iniciando bucle de auto-mejora para 1 registros anómalos (max_iter=1)...
+2026-06-02 08:43:01,007 - BITS_Pipeline - INFO - [NLP] Auto-mejora iteración 1 de 1 (Filas anómalas: 1)
+2026-06-02 08:43:01,010 - BITS_Pipeline - INFO - [NLP] Auto-curación exitosa en fila 0: PQS mejoró de 20.0% a 100.0% (Justificación: OK)
+2026-06-02 08:43:01,020 - BITS_Pipeline - INFO - [NLP] Auditoría de lote exportada en: data/output/posologia_batch_audit.json (1 registros)
+2026-06-02 08:43:01,029 - BITS_Pipeline - INFO - [PBS] Ejecutando Auditoría por Jerarquía ATC...
+2026-06-02 08:43:01,039 - BITS_Pipeline - INFO - [PBS] Ejecutando Match Fuzzy con Anexo DCI...
+2026-06-02 08:43:01,045 - BITS_Pipeline - INFO - [PBS] Ejecutando Cruce contra POS Populi...
+2026-06-02 08:43:01,048 - BITS_Pipeline - INFO - [PBS] Aplicando Diccionario de Sinónimos...
+2026-06-02 08:43:01,095 - BITS_Pipeline - INFO - [PBS] Aplicando Ajustes Manuales de Seguimiento...
+2026-06-02 08:43:01,102 - BITS_Pipeline - INFO - [PBS] Ajustes manuales aplicados.
+2026-06-02 08:45:17,286 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 08:45:20,056 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 08:45:22,821 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 08:45:26,442 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:45:26,442 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:45:29,471 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:45:29,472 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:45:32,553 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:45:32,554 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:45:35,712 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:45:35,713 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:45:35,725 - BITS_Pipeline - INFO - [NLP] Bypass de validación humana (HITL) inyectado exitosamente.
+2026-06-02 08:45:35,727 - BITS_Pipeline - INFO - [NLP] Lote actual 100% consistente. Omitiendo bucle de auto-mejora.
+2026-06-02 08:45:35,742 - BITS_Pipeline - INFO - [NLP] Auditoría de lote exportada en: data/output/posologia_batch_audit.json (1 registros)
+2026-06-02 08:45:41,804 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:45:41,804 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 08:45:41,806 - BITS_Pipeline - INFO - [NLP] Iniciando bucle de auto-mejora para 1 registros anómalos (max_iter=1)...
+2026-06-02 08:45:41,807 - BITS_Pipeline - INFO - [NLP] Auto-mejora iteración 1 de 1 (Filas anómalas: 1)
+2026-06-02 08:45:41,809 - BITS_Pipeline - INFO - [NLP] Auto-curación exitosa en fila 0: PQS mejoró de 20.0% a 100.0% (Justificación: OK)
+2026-06-02 08:45:41,822 - BITS_Pipeline - INFO - [NLP] Auditoría de lote exportada en: data/output/posologia_batch_audit.json (1 registros)
+2026-06-02 08:45:41,834 - BITS_Pipeline - INFO - [PBS] Ejecutando Auditoría por Jerarquía ATC...
+2026-06-02 08:45:41,842 - BITS_Pipeline - INFO - [PBS] Ejecutando Match Fuzzy con Anexo DCI...
+2026-06-02 08:45:41,849 - BITS_Pipeline - INFO - [PBS] Ejecutando Cruce contra POS Populi...
+2026-06-02 08:45:41,851 - BITS_Pipeline - INFO - [PBS] Aplicando Diccionario de Sinónimos...
+2026-06-02 08:45:41,907 - BITS_Pipeline - INFO - [PBS] Aplicando Ajustes Manuales de Seguimiento...
+2026-06-02 08:45:41,915 - BITS_Pipeline - INFO - [PBS] Ajustes manuales aplicados.
+2026-06-02 11:11:20,615 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 11:11:23,445 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 11:11:26,416 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 11:11:31,953 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:11:31,953 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:11:34,894 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:11:34,895 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:11:38,009 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:11:38,010 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:11:41,304 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:11:41,304 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:11:41,311 - BITS_Pipeline - INFO - [NLP] Bypass de validación humana (HITL) inyectado exitosamente.
+2026-06-02 11:11:41,312 - BITS_Pipeline - INFO - [NLP] Lote actual 100% consistente. Omitiendo bucle de auto-mejora.
+2026-06-02 11:11:41,320 - BITS_Pipeline - INFO - [NLP] Auditoría de lote exportada en: data/output/posologia_batch_audit.json (1 registros)
+2026-06-02 11:11:45,491 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:11:45,491 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:11:45,494 - BITS_Pipeline - INFO - [NLP] Iniciando bucle de auto-mejora para 1 registros anómalos (max_iter=1)...
+2026-06-02 11:11:45,494 - BITS_Pipeline - INFO - [NLP] Auto-mejora iteración 1 de 1 (Filas anómalas: 1)
+2026-06-02 11:11:45,497 - BITS_Pipeline - INFO - [NLP] Auto-curación exitosa en fila 0: PQS mejoró de 20.0% a 100.0% (Justificación: OK)
+2026-06-02 11:11:45,506 - BITS_Pipeline - INFO - [NLP] Auditoría de lote exportada en: data/output/posologia_batch_audit.json (1 registros)
+2026-06-02 11:11:45,515 - BITS_Pipeline - INFO - [PBS] Ejecutando Auditoría por Jerarquía ATC...
+2026-06-02 11:11:45,521 - BITS_Pipeline - INFO - [PBS] Ejecutando Match Fuzzy con Anexo DCI...
+2026-06-02 11:11:45,526 - BITS_Pipeline - INFO - [PBS] Ejecutando Cruce contra POS Populi...
+2026-06-02 11:11:45,529 - BITS_Pipeline - INFO - [PBS] Aplicando Diccionario de Sinónimos...
+2026-06-02 11:11:45,574 - BITS_Pipeline - INFO - [PBS] Aplicando Ajustes Manuales de Seguimiento...
+2026-06-02 11:11:45,581 - BITS_Pipeline - INFO - [PBS] Ajustes manuales aplicados.
+2026-06-02 11:12:55,986 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 11:12:58,838 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 11:13:01,699 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 11:13:07,365 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:13:07,366 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:13:10,340 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:13:10,341 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:13:13,291 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:13:13,292 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:13:16,264 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:13:16,265 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:13:16,272 - BITS_Pipeline - INFO - [NLP] Bypass de validación humana (HITL) inyectado exitosamente.
+2026-06-02 11:13:16,272 - BITS_Pipeline - INFO - [NLP] Lote actual 100% consistente. Omitiendo bucle de auto-mejora.
+2026-06-02 11:13:16,281 - BITS_Pipeline - INFO - [NLP] Auditoría de lote exportada en: data/output/posologia_batch_audit.json (1 registros)
+2026-06-02 11:13:20,893 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:13:20,893 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 11:13:20,895 - BITS_Pipeline - INFO - [NLP] Iniciando bucle de auto-mejora para 1 registros anómalos (max_iter=1)...
+2026-06-02 11:13:20,897 - BITS_Pipeline - INFO - [NLP] Auto-mejora iteración 1 de 1 (Filas anómalas: 1)
+2026-06-02 11:13:20,900 - BITS_Pipeline - INFO - [NLP] Auto-curación exitosa en fila 0: PQS mejoró de 20.0% a 100.0% (Justificación: OK)
+2026-06-02 11:13:20,921 - BITS_Pipeline - INFO - [NLP] Auditoría de lote exportada en: data/output/posologia_batch_audit.json (1 registros)
+2026-06-02 11:13:20,932 - BITS_Pipeline - INFO - [PBS] Ejecutando Auditoría por Jerarquía ATC...
+2026-06-02 11:13:20,939 - BITS_Pipeline - INFO - [PBS] Ejecutando Match Fuzzy con Anexo DCI...
+2026-06-02 11:13:20,945 - BITS_Pipeline - INFO - [PBS] Ejecutando Cruce contra POS Populi...
+2026-06-02 11:13:20,948 - BITS_Pipeline - INFO - [PBS] Aplicando Diccionario de Sinónimos...
+2026-06-02 11:13:21,003 - BITS_Pipeline - INFO - [PBS] Aplicando Ajustes Manuales de Seguimiento...
+2026-06-02 11:13:21,010 - BITS_Pipeline - INFO - [PBS] Ajustes manuales aplicados.
+2026-06-02 14:55:45,974 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 14:55:48,844 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 14:55:51,785 - BITS_Pipeline - INFO - [LIMPIEZA] Modelo SLM cargado para estandarización de Formas.
+2026-06-02 14:55:59,233 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 14:55:59,234 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 14:56:02,301 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 14:56:02,302 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 14:56:05,287 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 14:56:05,288 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 14:56:08,319 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 14:56:08,320 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 14:56:08,325 - BITS_Pipeline - INFO - [NLP] Bypass de validación humana (HITL) inyectado exitosamente.
+2026-06-02 14:56:08,326 - BITS_Pipeline - INFO - [NLP] Lote actual 100% consistente. Omitiendo bucle de auto-mejora.
+2026-06-02 14:56:08,333 - BITS_Pipeline - INFO - [NLP] Auditoría de lote exportada en: data/output/posologia_batch_audit.json (1 registros)
+2026-06-02 14:56:12,952 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 14:56:12,953 - BITS_Pipeline - INFO - [NLP] Módulo de extracción de posología inicializado.
+2026-06-02 14:56:12,956 - BITS_Pipeline - INFO - [NLP] Iniciando bucle de auto-mejora para 1 registros anómalos (max_iter=1)...
+2026-06-02 14:56:12,957 - BITS_Pipeline - INFO - [NLP] Auto-mejora iteración 1 de 1 (Filas anómalas: 1)
+2026-06-02 14:56:12,960 - BITS_Pipeline - INFO - [NLP] Auto-curación exitosa en fila 0: PQS mejoró de 20.0% a 100.0% (Justificación: OK)
+2026-06-02 14:56:12,973 - BITS_Pipeline - INFO - [NLP] Auditoría de lote exportada en: data/output/posologia_batch_audit.json (1 registros)
+2026-06-02 14:56:12,986 - BITS_Pipeline - INFO - [PBS] Ejecutando Auditoría por Jerarquía ATC...
+2026-06-02 14:56:12,993 - BITS_Pipeline - INFO - [PBS] Ejecutando Match Fuzzy con Anexo DCI...
+2026-06-02 14:56:13,004 - BITS_Pipeline - INFO - [PBS] Ejecutando Cruce contra POS Populi...
+2026-06-02 14:56:13,014 - BITS_Pipeline - INFO - [PBS] Aplicando Diccionario de Sinónimos...
+2026-06-02 14:56:13,092 - BITS_Pipeline - INFO - [PBS] Aplicando Ajustes Manuales de Seguimiento...
+2026-06-02 14:56:13,105 - BITS_Pipeline - INFO - [PBS] Ajustes manuales aplicados.

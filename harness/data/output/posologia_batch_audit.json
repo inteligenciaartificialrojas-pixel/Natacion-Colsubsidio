@@ -1,0 +1,16 @@
+[
+  {
+    "ID_Registro": 200,
+    "Hash_Registro": "hash456",
+    "Texto_Original": "CAJA CON INHALADOR CON 200 DOSIS",
+    "UMD_Extraida": "INHALADOR",
+    "Cantidad_Extraida": "1",
+    "Presentacion_Extraida": "CAJA",
+    "Volumen_Extraido": "200",
+    "Unidad_Volumen_Extraida": "DOSIS",
+    "PQS": 100.0,
+    "Estado_Validacion": "PASSED",
+    "Alerta_Clinica": "OK",
+    "Correccion_Humana": null
+  }
+]
