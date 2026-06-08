@@ -72,6 +72,37 @@ class TelegramNotifier:
             logger.warning("Fallo en la conexión HTTP con la API de Telegram: %s", e)
             return False
 
+    def get_incoming_commands(self, offset: int = 0) -> list[dict]:
+        """
+        Consulta la API de Telegram getUpdates para obtener los mensajes del bot.
+        Retorna la lista de resultados de actualizaciones.
+        """
+        if not self.token:
+            logger.error("No se puede obtener comandos de Telegram: token no configurado.")
+            return []
+
+        url = f"https://api.telegram.org/bot{self.token}/getUpdates"
+        payload = {
+            "offset": offset,
+            "timeout": 0,
+            "allowed_updates": ["message"]
+        }
+
+        try:
+            response = requests.post(url, json=payload, timeout=10)
+            if response.status_code == 200:
+                return response.json().get("result", [])
+            else:
+                logger.warning(
+                    "Error al obtener actualizaciones de Telegram (HTTP %s): %s",
+                    response.status_code,
+                    response.text
+                )
+                return []
+        except Exception as e:
+            logger.warning("Fallo al conectarse con getUpdates de Telegram: %s", e)
+            return []
+
     def notify_slot(self, venue: str, date_str: str, time_str: str, slots: int) -> bool:
         """
         Envía una alerta de cupo disponible si no ha sido notificada recientemente.
@@ -102,10 +133,10 @@ class TelegramNotifier:
 
         return False
 
-    def notify_venue_slots(self, venue: str, slots: list[dict]) -> bool:
+    def notify_venue_slots(self, venue: str, slots: list[dict], force: bool = False) -> bool:
         """
         Envía un único mensaje compilado con todos los cupos de una sede.
-        Evita enviar si el estado de disponibilidad no ha cambiado.
+        Evita enviar si el estado de disponibilidad no ha cambiado (a menos que force sea True).
         """
         if not slots:
             return False
@@ -121,7 +152,7 @@ class TelegramNotifier:
         self.prune_cache()
 
         # Verificar si ya se envió exactamente esta configuración recientemente
-        if key in self._sent_alerts:
+        if not force and key in self._sent_alerts:
             logger.debug("Alerta compilada duplicada omitida para la sede: %s", venue)
             return False
 
@@ -136,6 +167,9 @@ class TelegramNotifier:
             f"📍 *Sede:* {venue}\n"
         ]
 
+        from config import VENUE_SERVICE_IDS
+        service_id = VENUE_SERVICE_IDS.get(venue.strip().upper(), 0)
+
         for date_str, date_slots in sorted(grouped.items()):
             try:
                 dt = datetime.strptime(date_str, "%Y-%m-%d")
@@ -147,7 +181,11 @@ class TelegramNotifier:
 
             lines.append(date_header)
             for s in date_slots:
-                lines.append(f"• ⏰ `{s['hora']}` 🎟️ `{s['cupos']}` cupos")
+                # Generar link interactivo de comando para Telegram (ej. /agendar_229_2026_06_12_18_00)
+                date_key = date_str.replace("-", "_")
+                time_key = s["hora"].replace(":", "_")
+                command = f"/agendar_{service_id}_{date_key}_{time_key}"
+                lines.append(f"• ⏰ `{s['hora']}` 🎟️ `{s['cupos']}` cupos 👉 {command}")
             lines.append("")  # Espacio entre fechas
 
         lines.append("🔗 _Reserva en la Tienda de Diversión Colsubsidio_")

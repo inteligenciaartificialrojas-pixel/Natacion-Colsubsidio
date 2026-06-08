@@ -60,8 +60,11 @@ def test_fetch_slots_for_date_success(mock_post: MagicMock) -> None:
     scraper = ColsubsidioScraper(session_cookie="sess", csrf_token="csrf")
     slots = scraper.fetch_slots_for_date(service_id=232, date_str="2026-06-10")
     
-    assert len(slots) == 1
-    assert slots[0] == {"fecha": "2026-06-10", "hora": "18:00", "cupos": 4}
+    assert slots[0]["fecha"] == "2026-06-10"
+    assert slots[0]["hora"] == "18:00"
+    assert slots[0]["cupos"] == 4
+    assert slots[0]["raw_horario"] == {"hora_inicio": "18:00:00"}
+    assert slots[0]["zonas"] == [{"capacidad_disponible": 3}, {"capacidad_disponible": 1}]
 
 @patch("requests.Session.post")
 def test_session_expired_http_401(mock_post: MagicMock) -> None:
@@ -120,3 +123,39 @@ def test_resilience_on_timeout(mock_post: MagicMock) -> None:
 
     scraper = ColsubsidioScraper(session_cookie="sess", csrf_token="csrf")
     assert scraper.fetch_available_dates(service_id=232) == []
+
+@patch("requests.Session.post")
+def test_book_slot_success(mock_post: MagicMock) -> None:
+    """Verifica que book_slot realice la reserva correctamente cuando el API responde 200."""
+    mock_response_dispo = MagicMock()
+    mock_response_dispo.status_code = 200
+    mock_response_dispo.headers = {"Content-Type": "application/json"}
+    mock_response_dispo.json.return_value = {
+        "horarios": [
+            {
+                "horario": {"fecha": "2026-06-10", "hora_inicio": "18:00:00", "hora_fin": "18:50:00"},
+                "duracion": 50,
+                "zonas": [{"id": 12, "capacidad_disponible": 1}]
+            }
+        ]
+    }
+    
+    mock_response_reserva = MagicMock()
+    mock_response_reserva.status_code = 200
+    mock_response_reserva.headers = {"Content-Type": "application/json"}
+    mock_response_reserva.json.return_value = {
+        "turnos_practica_libre": [
+            {
+                "id": 999
+            }
+        ]
+    }
+    
+    mock_post.side_effect = [mock_response_dispo, mock_response_reserva]
+    
+    scraper = ColsubsidioScraper(session_cookie="sess", csrf_token="csrf")
+    success, msg = scraper.book_slot(service_id=232, date_str="2026-06-10", time_str="18:00", tiquetera_id=6370683)
+    
+    assert success is True
+    assert "éxito" in msg.lower()
+    assert mock_post.call_count == 2

@@ -109,3 +109,34 @@ def test_notify_venue_slots_expiration(mock_time: MagicMock, mock_post: MagicMoc
     mock_time.return_value = 1011.0
     assert notifier.notify_venue_slots("El Cubo", slots) is True
     assert mock_post.call_count == 2
+
+@patch("requests.post")
+def test_get_incoming_commands_success(mock_post: MagicMock) -> None:
+    """Verifica el retorno correcto de comandos desde getUpdates de Telegram."""
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "result": [
+            {
+                "update_id": 100,
+                "message": {
+                    "chat": {"id": 12345},
+                    "text": "/agendar_229_2026_06_12_18_00"
+                }
+            }
+        ]
+    }
+    mock_post.return_value = mock_response
+
+    notifier = TelegramNotifier(token="token", chat_id="chat_id")
+    updates = notifier.get_incoming_commands(offset=101)
+    
+    assert len(updates) == 1
+    assert updates[0]["update_id"] == 100
+    assert updates[0]["message"]["text"] == "/agendar_229_2026_06_12_18_00"
+    mock_post.assert_called_once_with(
+        "https://api.telegram.org/bottoken/getUpdates",
+        json={"offset": 101, "timeout": 0, "allowed_updates": ["message"]},
+        timeout=10
+    )
+

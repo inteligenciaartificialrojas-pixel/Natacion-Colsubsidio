@@ -4,6 +4,8 @@ import logging
 import time
 import sys
 import os
+import json
+import re
 from datetime import datetime, timedelta, date
 from config import VENUE_SERVICE_IDS, DEFAULT_CHECK_INTERVAL_SECONDS
 from scraper import ColsubsidioScraper, SessionExpiredException
@@ -19,6 +21,74 @@ logger = logging.getLogger("revisor_natacion")
 
 # Caché en memoria para evitar recalcular los festivos del mismo año en cada escaneo
 _holidays_cache: dict[int, set[date]] = {}
+
+STATE_FILE = ".cooldown_state"
+LAST_SLOTS_FILE = ".last_slots.json"
+
+def load_cooldown_state() -> dict:
+    """Carga el estado del orquestador en formato JSON para persistencia."""
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r", encoding="utf-8") as f:
+                content = f.read().strip()
+            if content:
+                try:
+                    return json.loads(content)
+                except ValueError:
+                    # Compatibilidad con formato antiguo de float simple
+                    return {
+                        "last_expiry_alert_time": float(content),
+                        "last_report_sent": "",
+                        "last_processed_update_id": 0
+                    }
+        except Exception:
+            pass
+    return {
+        "last_expiry_alert_time": 0.0,
+        "last_report_sent": "",
+        "last_processed_update_id": 0
+    }
+
+def save_cooldown_state(state: dict) -> None:
+    """Guarda el estado del orquestador en formato JSON."""
+    try:
+        with open(STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump(state, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error("Error al guardar archivo de estado: %s", e)
+
+def load_last_slots() -> dict[str, list[dict]]:
+    """Carga los últimos slots detectados en la corrida anterior."""
+    if os.path.exists(LAST_SLOTS_FILE):
+        try:
+            with open(LAST_SLOTS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def save_last_slots(slots_dict: dict[str, list[dict]]) -> None:
+    """Guarda los slots actuales detectados para comparación posterior."""
+    try:
+        with open(LAST_SLOTS_FILE, "w", encoding="utf-8") as f:
+            json.dump(slots_dict, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.error("Error al guardar estado de slots: %s", e)
+
+def find_new_slots(current_slots: list[dict], last_slots: list[dict]) -> list[dict]:
+    """
+    Compara los slots actuales contra los anteriores.
+    Retorna los slots nuevos o los que tienen mayor número de cupos disponibles.
+    """
+    last_map = {(s["fecha"], s["hora"]): s["cupos"] for s in last_slots}
+    new_slots = []
+    for s in current_slots:
+        key = (s["fecha"], s["hora"])
+        if key not in last_map:
+            new_slots.append(s)
+        elif s["cupos"] > last_map[key]:
+            new_slots.append(s)
+    return new_slots
 
 def is_colombian_holiday(target_date: date) -> bool:
     """Calcula dinámicamente si una fecha es festivo en Colombia usando la Ley Emiliani."""
@@ -106,8 +176,15 @@ def is_within_preferred_schedule(date_str: str, time_str: str) -> bool:
         logger.error("Error al evaluar horario preferido (%s, %s): %s", date_str, time_str, e)
         return False
 
-def check_venues(scraper: ColsubsidioScraper, notifier: TelegramNotifier) -> None:
-    """Consulta la disponibilidad para todas las sedes configuradas y dispara alertas compiladas."""
+def check_venues(scraper: ColsubsidioScraper, notifier: TelegramNotifier, force_send: bool = False) -> None:
+    """
+    Consulta la disponibilidad para todas las sedes configuradas.
+    - force_send=True: Envía el reporte completo sin importar si hay delta de cupos.
+    - force_send=False: Envía el reporte solo si hay cupos nuevos detectados.
+    """
+    last_slots_dict = load_last_slots()
+    current_slots_dict = {}
+
     for venue_name, service_id in VENUE_SERVICE_IDS.items():
         try:
             logger.info("Chequeando disponibilidad para la sede: %s (ID: %s)", venue_name, service_id)
@@ -120,45 +197,117 @@ def check_venues(scraper: ColsubsidioScraper, notifier: TelegramNotifier) -> Non
                     if is_within_preferred_schedule(slot["fecha"], slot["hora"]):
                         matching_slots.append(slot)
             
+            current_slots_dict[venue_name] = matching_slots
+            
             if matching_slots:
-                notified = notifier.notify_venue_slots(venue_name, matching_slots)
-                if notified:
-                    logger.info("¡Alerta compilada enviada para la sede %s!", venue_name)
+                last_venue_slots = last_slots_dict.get(venue_name, [])
+                new_slots = find_new_slots(matching_slots, last_venue_slots)
+                
+                # Reportar si es envío programado (force_send) o si hay cupos nuevos
+                if force_send or new_slots:
+                    # Pasamos force=force_send para que el notificador se salte la caché interna en reportes programados
+                    notified = notifier.notify_venue_slots(venue_name, matching_slots, force=force_send)
+                    if notified:
+                        logger.info("¡Reporte enviado para la sede %s (force_send=%s)!", venue_name, force_send)
         except SessionExpiredException:
-            # Propagar para que el loop principal lo capture y alerte al usuario
             raise
         except Exception as e:
             logger.error("Error al escanear la sede %s: %s", venue_name, e)
 
+    save_last_slots(current_slots_dict)
+
 def main() -> None:
-    """Bucle principal de ejecución periódica o única."""
+    """Bucle principal de ejecución del Revisor de Natación."""
     logger.info("Iniciando el Revisor de Natación Colsubsidio...")
     
     scraper = ColsubsidioScraper()
     notifier = TelegramNotifier()
     
     interval = DEFAULT_CHECK_INTERVAL_SECONDS
-    state_file = ".cooldown_state"
-    last_expiry_alert_time = 0.0
+    state = load_cooldown_state()
 
-    # Intentar cargar el estado anterior del cooldown
-    if os.path.exists(state_file):
-        try:
-            with open(state_file, "r") as f:
-                last_expiry_alert_time = float(f.read().strip())
-        except Exception:
-            pass
+    # 1. Procesar comandos interactivos de Telegram antes de hacer el chequeo
+    offset = state.get("last_processed_update_id", 0) + 1
+    updates = notifier.get_incoming_commands(offset=offset)
+
+    for update in updates:
+        update_id = update.get("update_id")
+        if update_id:
+            state["last_processed_update_id"] = max(state["last_processed_update_id"], update_id)
+
+        message = update.get("message", {})
+        text = message.get("text", "").strip()
+        chat_id = message.get("chat", {}).get("id")
+
+        # Seguridad: Solo procesar comandos del chat_id autorizado
+        if str(chat_id) != str(notifier.chat_id):
+            continue
+
+        # Match del comando de agendamiento (/agendar_ID_YYYY_MM_DD_HH_MM)
+        match = re.match(r"^/agendar_(\d+)_(\d{4}_\d{2}_\d{2})_(\d{2}_\d{2})$", text)
+        if match:
+            service_id = int(match.group(1))
+            date_str = match.group(2).replace("_", "-")
+            time_str = match.group(3).replace("_", ":")
+
+            from config import VENUE_SERVICE_IDS, COLSUBSIDIO_TIQUETERA_ID
+            sede_name = next((k for k, v in VENUE_SERVICE_IDS.items() if v == service_id), "Desconocida")
+
+            logger.info("Comando de agendamiento recibido para: %s, %s, %s", sede_name, date_str, time_str)
+            notifier.send_message(f"⏳ *[Procesando Reserva]*\n\nSede: *{sede_name}*\nFecha: *{date_str}*\nHora: *{time_str}*\nUsando tiquetera: `{COLSUBSIDIO_TIQUETERA_ID}`\n\nPor favor espera...")
+
+            if not COLSUBSIDIO_TIQUETERA_ID:
+                notifier.send_message("❌ *Error al agendar:* No se encuentra configurado el ID de tiquetera (`COLSUBSIDIO_TIQUETERA_ID`).")
+                continue
+
+            success, msg = scraper.book_slot(service_id, date_str, time_str, COLSUBSIDIO_TIQUETERA_ID)
+            if success:
+                notifier.send_message(
+                    "🎉 *¡Reserva Realizada con Éxito!* 🎉\n\n"
+                    f"📍 *Sede:* {sede_name}\n"
+                    f"📅 *Fecha:* {date_str}\n"
+                    f"⏰ *Hora:* {time_str}\n"
+                    "🎟️ *Confirmación:* La reserva ha sido ingresada en la plataforma Colsubsidio."
+                )
+            else:
+                notifier.send_message(
+                    "⚠️ *Fallo al Reservar* ⚠️\n\n"
+                    f"📍 *Sede:* {sede_name}\n"
+                    f"📅 *Fecha:* {date_str}\n"
+                    f"⏰ *Hora:* {time_str}\n"
+                    f"❌ *Motivo:* `{msg}`"
+                )
+
+    # 2. Calcular hora local de Colombia (Bogotá UTC-5)
+    now_colombia = datetime.utcnow() - timedelta(hours=5)
+    date_str = now_colombia.strftime("%Y-%m-%d")
+    hour = now_colombia.hour
+
+    is_scheduled_time = hour in [6, 13]
+    report_key = f"{date_str}-{hour}"
+
+    send_full_report = False
+    if is_scheduled_time and state.get("last_report_sent") != report_key:
+        send_full_report = True
+
+    # Permitir forzar el reporte completo usando el argumento --force
+    force_run = "--force" in sys.argv
+    if force_run:
+        send_full_report = True
 
     once = "--once" in sys.argv
 
     if once:
         try:
-            check_venues(scraper, notifier)
+            check_venues(scraper, notifier, force_send=send_full_report)
+            if send_full_report:
+                state["last_report_sent"] = report_key
+            save_cooldown_state(state)
             logger.info("Chequeo único finalizado con éxito.")
         except SessionExpiredException as e:
             logger.error("La sesión de Colsubsidio ha expirado: %s", e)
             current_time = time.time()
-            if current_time - last_expiry_alert_time > 86400:
+            if current_time - state["last_expiry_alert_time"] > 86400:
                 msg = (
                     "⚠️ *[Alerta de Revisor de Natación]*\n\n"
                     "Tu sesión de Colsubsidio (cookie `sistema`) ha expirado o es inválida.\n"
@@ -166,12 +315,8 @@ def main() -> None:
                     "en tus variables de entorno para continuar con el monitoreo."
                 )
                 if notifier.send_message(msg):
-                    last_expiry_alert_time = current_time
-                    try:
-                        with open(state_file, "w") as f:
-                            f.write(str(last_expiry_alert_time))
-                    except Exception:
-                        pass
+                    state["last_expiry_alert_time"] = current_time
+                    save_cooldown_state(state)
                     logger.info("Alerta de sesión expirada enviada a Telegram.")
             sys.exit(1)
         except Exception as e:
@@ -181,13 +326,15 @@ def main() -> None:
 
     while True:
         try:
-            check_venues(scraper, notifier)
+            check_venues(scraper, notifier, force_send=send_full_report)
+            if send_full_report:
+                state["last_report_sent"] = report_key
+            save_cooldown_state(state)
             logger.info("Chequeo finalizado. Durmiendo por %s segundos...", interval)
         except SessionExpiredException as e:
             logger.error("La sesión de Colsubsidio ha expirado: %s", e)
             current_time = time.time()
-            # Cooldown de 24 horas para alertas de expiración (86400 segundos)
-            if current_time - last_expiry_alert_time > 86400:
+            if current_time - state["last_expiry_alert_time"] > 86400:
                 msg = (
                     "⚠️ *[Alerta de Revisor de Natación]*\n\n"
                     "Tu sesión de Colsubsidio (cookie `sistema`) ha expirado o es inválida.\n"
@@ -195,16 +342,14 @@ def main() -> None:
                     "en tus variables de entorno para continuar con el monitoreo."
                 )
                 if notifier.send_message(msg):
-                    last_expiry_alert_time = current_time
-                    try:
-                        with open(state_file, "w") as f:
-                            f.write(str(last_expiry_alert_time))
-                    except Exception:
-                        pass
+                    state["last_expiry_alert_time"] = current_time
+                    save_cooldown_state(state)
                     logger.info("Alerta de sesión expirada enviada a Telegram.")
         except Exception as e:
             logger.error("Error inesperado en el loop principal: %s", e)
-        
+
+        # Volver a cargar el estado en cada iteración del bucle continuo para refrescar variables
+        state = load_cooldown_state()
         time.sleep(interval)
 
 if __name__ == "__main__":

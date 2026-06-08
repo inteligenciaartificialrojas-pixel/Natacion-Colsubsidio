@@ -171,7 +171,9 @@ class ColsubsidioScraper:
                     slots.append({
                         "fecha": date_str,
                         "hora": hora_formatted,
-                        "cupos": cupos
+                        "cupos": cupos,
+                        "raw_horario": h.get("horario", {}),
+                        "zonas": h.get("zonas", [])
                     })
 
             return slots
@@ -184,3 +186,100 @@ class ColsubsidioScraper:
         except ValueError as e:
             logger.error("Error al parsear el JSON de horarios para %s: %s", date_str, e)
             return []
+
+    def book_slot(self, service_id: int, date_str: str, time_str: str, tiquetera_id: int) -> tuple[bool, str]:
+        """
+        Intenta reservar un slot de natación específico utilizando la tiquetera especificada.
+        Retorna (True, mensaje_exito) o (False, mensaje_error).
+        """
+        # 1. Obtener la disponibilidad de la fecha para extraer el slot con su raw_horario y zonas
+        slots = self.fetch_slots_for_date(service_id, date_str)
+        target_slot = None
+        for s in slots:
+            if s["hora"] == time_str:
+                target_slot = s
+                break
+        
+        if not target_slot:
+            return False, f"El horario {time_str} ya no está disponible en la fecha {date_str}."
+        
+        # 2. Seleccionar la primera zona/carril disponible
+        selected_zone_id = None
+        for z in target_slot.get("zonas", []):
+            z_cupos = z.get("cupos", z.get("capacidad_disponible", 0))
+            if z_cupos > 0:
+                selected_zone_id = z.get("id")
+                break
+        
+        if not selected_zone_id:
+            return False, "No hay carriles (zonas) con cupo disponible para este horario."
+
+        # Importaciones diferidas
+        from config import COLSUBSIDIO_DOCUMENT_TYPE, COLSUBSIDIO_DOCUMENT_NUMBER
+
+        persona = {
+            "tipo_documento": COLSUBSIDIO_DOCUMENT_TYPE or "CC",
+            "documento": COLSUBSIDIO_DOCUMENT_NUMBER,
+            "datos": {
+                "zona": 1
+            }
+        }
+
+        materiales = [
+            {
+                "persona": persona,
+                "informacion_compra_material": []
+            }
+        ]
+
+        payload = {
+            "servicio": {
+                "id": service_id,
+                "tipo": 2
+            },
+            "turnos_practica_libre": [
+                {
+                    "horario": {
+                        "fecha": target_slot["raw_horario"].get("fecha"),
+                        "hora_inicio": target_slot["raw_horario"].get("hora_inicio"),
+                        "hora_fin": target_slot["raw_horario"].get("hora_fin")
+                    },
+                    "tiquetera": tiquetera_id,
+                    "cantidad_usos": 1,
+                    "numero_participantes": 1,
+                    "persona": persona,
+                    "materiales": materiales,
+                    "zona": [
+                        {
+                            "id": selected_zone_id
+                        }
+                    ]
+                }
+            ]
+        }
+
+        url = f"https://www.diversioncolsubsidio.com/v1/centro_entrenamiento/{service_id}/practicalibre/reservar"
+
+        try:
+            logger.info("Realizando petición de reserva al servicio %s...", service_id)
+            response = self.session.post(url, json=payload, timeout=20)
+            self._check_unauthorized(response)
+
+            if response.status_code in [200, 201]:
+                res_data = response.json()
+                if "turnos_practica_libre" in res_data:
+                    return True, "Reserva realizada con éxito en la plataforma."
+                else:
+                    return False, f"La respuesta de la plataforma no confirmó la reserva: {response.text}"
+            else:
+                try:
+                    res_data = response.json()
+                    err = res_data.get("mensaje") or res_data.get("error", {}).get("message") or response.text
+                except Exception:
+                    err = response.text
+                return False, f"Error del servidor (HTTP {response.status_code}): {err}"
+        except SessionExpiredException:
+            raise
+        except Exception as e:
+            logger.error("Error al procesar la reserva: %s", e)
+            return False, f"Fallo en la comunicación con Colsubsidio: {e}"

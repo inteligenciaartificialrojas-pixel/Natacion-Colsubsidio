@@ -26,6 +26,10 @@ COLSUBSIDIO_CSRF_TOKEN: str | None = os.environ.get("COLSUBSIDIO_CSRF_TOKEN")
 COLSUBSIDIO_DOCUMENT_TYPE: str = os.environ.get("COLSUBSIDIO_DOCUMENT_TYPE", "CC")
 COLSUBSIDIO_DOCUMENT_NUMBER: str = os.environ.get("COLSUBSIDIO_DOCUMENT_NUMBER", "1002559691")
 
+# ID de la tiquetera/plan para reservas automatizadas/interactivas
+_tiq_val = os.environ.get("COLSUBSIDIO_TIQUETERA_ID") or "6370683"
+COLSUBSIDIO_TIQUETERA_ID: int | None = int(_tiq_val) if _tiq_val.isdigit() else None
+
 # Configuración de búsqueda
 # Sedes de interés normalizadas en mayúsculas
 PREFERRED_VENUES: list[str] = [

@@ -32,10 +32,18 @@ def test_is_within_preferred_schedule_weekends() -> None:
     assert is_within_preferred_schedule(saturday, "12:00") is True
     assert is_within_preferred_schedule(saturday, "21:00") is True
 
+@patch("main.load_last_slots")
+@patch("main.save_last_slots")
 @patch("scraper.ColsubsidioScraper")
 @patch("notifier.TelegramNotifier")
-def test_check_venues_integration(mock_notifier_cls: MagicMock, mock_scraper_cls: MagicMock) -> None:
+def test_check_venues_integration(
+    mock_notifier_cls: MagicMock,
+    mock_scraper_cls: MagicMock,
+    mock_save_slots: MagicMock,
+    mock_load_slots: MagicMock
+) -> None:
     """Verifica que check_venues filtre y notifique correctamente los cupos válidos."""
+    mock_load_slots.return_value = {}
     scraper = mock_scraper_cls()
     notifier = mock_notifier_cls()
 
@@ -68,9 +76,9 @@ def test_check_venues_integration(mock_notifier_cls: MagicMock, mock_scraper_cls
         {"fecha": "2026-06-01", "hora": "18:30", "cupos": 2},
         {"fecha": "2026-06-13", "hora": "08:00", "cupos": 5}
     ]
-    notifier.notify_venue_slots.assert_any_call("EL CUBO", expected_slots)
-    notifier.notify_venue_slots.assert_any_call("PLAZA DE LAS AMERICAS", expected_slots)
-    notifier.notify_venue_slots.assert_any_call("CLUB LA COLINA", expected_slots)
+    notifier.notify_venue_slots.assert_any_call("EL CUBO", expected_slots, force=False)
+    notifier.notify_venue_slots.assert_any_call("PLAZA DE LAS AMERICAS", expected_slots, force=False)
+    notifier.notify_venue_slots.assert_any_call("CLUB LA COLINA", expected_slots, force=False)
 
 @patch("scraper.ColsubsidioScraper")
 @patch("notifier.TelegramNotifier")
@@ -83,3 +91,37 @@ def test_check_venues_raises_expired(mock_notifier_cls: MagicMock, mock_scraper_
 
     with pytest.raises(SessionExpiredException):
         check_venues(scraper, notifier)
+
+def test_find_new_slots_logic() -> None:
+    """Verifica la lógica de detección de cupos nuevos (delta)."""
+    from main import find_new_slots
+    last_slots = [
+        {"fecha": "2026-06-10", "hora": "18:00", "cupos": 2},
+        {"fecha": "2026-06-11", "hora": "19:00", "cupos": 1}
+    ]
+    
+    # Caso 1: Mismo estado (no hay cupos nuevos)
+    current_slots_same = [
+        {"fecha": "2026-06-10", "hora": "18:00", "cupos": 2},
+        {"fecha": "2026-06-11", "hora": "19:00", "cupos": 1}
+    ]
+    assert find_new_slots(current_slots_same, last_slots) == []
+    
+    # Caso 2: Nuevo horario (es un cupo nuevo)
+    current_slots_new_time = [
+        {"fecha": "2026-06-10", "hora": "18:00", "cupos": 2},
+        {"fecha": "2026-06-10", "hora": "19:00", "cupos": 1},  # nuevo horario
+        {"fecha": "2026-06-11", "hora": "19:00", "cupos": 1}
+    ]
+    new_found = find_new_slots(current_slots_new_time, last_slots)
+    assert len(new_found) == 1
+    assert new_found[0]["hora"] == "19:00"
+    
+    # Caso 3: Incremento de cupos en un horario existente
+    current_slots_more_cupos = [
+        {"fecha": "2026-06-10", "hora": "18:00", "cupos": 3},  # subió de 2 a 3
+        {"fecha": "2026-06-11", "hora": "19:00", "cupos": 1}
+    ]
+    new_found2 = find_new_slots(current_slots_more_cupos, last_slots)
+    assert len(new_found2) == 1
+    assert new_found2[0]["cupos"] == 3

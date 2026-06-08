@@ -1,0 +1,38 @@
+{
+  "EL CUBO": [
+    {
+      "fecha": "2026-06-01",
+      "hora": "18:30",
+      "cupos": 2
+    },
+    {
+      "fecha": "2026-06-13",
+      "hora": "08:00",
+      "cupos": 5
+    }
+  ],
+  "PLAZA DE LAS AMERICAS": [
+    {
+      "fecha": "2026-06-01",
+      "hora": "18:30",
+      "cupos": 2
+    },
+    {
+      "fecha": "2026-06-13",
+      "hora": "08:00",
+      "cupos": 5
+    }
+  ],
+  "CLUB LA COLINA": [
+    {
+      "fecha": "2026-06-01",
+      "hora": "18:30",
+      "cupos": 2
+    },
+    {
+      "fecha": "2026-06-13",
+      "hora": "08:00",
+      "cupos": 5
+    }
+  ]
+}
