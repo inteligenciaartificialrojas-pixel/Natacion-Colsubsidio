@@ -6,19 +6,16 @@ on:
     - cron: '*/10 * * * *'
   workflow_dispatch: # Permite ejecución manual desde GitHub
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
-
 jobs:
   check-availability:
     runs-on: ubuntu-latest
 
     steps:
     - name: Descargar Código
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
     - name: Configurar Python
-      uses: actions/setup-python@v5
+      uses: actions/setup-python@v6
       with:
         python-version: '3.11'
 
@@ -28,7 +25,7 @@ jobs:
         pip install -r code/requirements.txt
 
     - name: Restaurar Caché de Estado
-      uses: actions/cache/restore@v4
+      uses: actions/cache/restore@v5
       with:
         path: |
           .cooldown_state
@@ -51,7 +48,7 @@ jobs:
 
     - name: Guardar Caché de Estado
       if: always()
-      uses: actions/cache/save@v4
+      uses: actions/cache/save@v5
       with:
         path: |
           .cooldown_state
