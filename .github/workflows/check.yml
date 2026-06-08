@@ -6,6 +6,9 @@ on:
     - cron: '*/10 * * * *'
   workflow_dispatch: # Permite ejecución manual desde GitHub
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   check-availability:
     runs-on: ubuntu-latest
