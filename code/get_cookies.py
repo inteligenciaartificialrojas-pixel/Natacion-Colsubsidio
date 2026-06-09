@@ -136,9 +136,11 @@ def extract_colsubsidio_cookies() -> dict[str, str]:
                             extracted["Csrf-Token"] = decrypted
                             
                 conn.close()
+            except PermissionError:
+                print(f"  [Error] No se pudo acceder a {db_path} porque está bloqueado por el navegador.")
+                print("  Por favor, cierra el navegador por completo para desbloquearlo.")
             except Exception as e:
-                # Omitir errores de lectura silenciosamente
-                pass
+                print(f"  [Aviso] No se pudo leer {db_path}: {e}")
             finally:
                 if os.path.exists(temp_db):
                     try:
@@ -230,6 +232,13 @@ def main():
         sys.exit(1)
 
     print("=== Extractor Automatizado de Cookies de Colsubsidio ===")
+    
+    # Liberar archivos de cookies cerrando procesos en segundo plano
+    print("Liberando archivos de cookies (cerrando procesos Edge/Chrome)...")
+    import subprocess
+    subprocess.run(["taskkill", "/F", "/IM", "msedge.exe"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.run(["taskkill", "/F", "/IM", "chrome.exe"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    
     cookies = extract_colsubsidio_cookies()
 
     if "sistema" in cookies and "Csrf-Token" in cookies:
