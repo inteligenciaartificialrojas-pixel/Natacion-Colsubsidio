@@ -1,60 +1,5 @@
 {
-  "EL CUBO": [
-    {
-      "fecha": "2026-06-08",
-      "hora": "17:00",
-      "cupos": 2,
-      "raw_horario": {
-        "fecha": "2026-06-08",
-        "hora_inicio": "17:00:00",
-        "hora_fin": "17:50:00"
-      },
-      "zonas": [
-        {
-          "id": 543,
-          "id_escenario": 150,
-          "escenario": "El Cubo Piscina ",
-          "nombre": "Carril 01",
-          "cupos": 0
-        },
-        {
-          "id": 544,
-          "id_escenario": 150,
-          "escenario": "El Cubo Piscina ",
-          "nombre": "Carril 02",
-          "cupos": 0
-        },
-        {
-          "id": 545,
-          "id_escenario": 150,
-          "escenario": "El Cubo Piscina ",
-          "nombre": "Carril 03",
-          "cupos": 0
-        },
-        {
-          "id": 546,
-          "id_escenario": 150,
-          "escenario": "El Cubo Piscina ",
-          "nombre": "Carril 04",
-          "cupos": 0
-        },
-        {
-          "id": 547,
-          "id_escenario": 150,
-          "escenario": "El Cubo Piscina ",
-          "nombre": "Carril 05",
-          "cupos": 0
-        },
-        {
-          "id": 550,
-          "id_escenario": 150,
-          "escenario": "El Cubo Piscina ",
-          "nombre": "Carril 08",
-          "cupos": 2
-        }
-      ]
-    }
-  ],
+  "EL CUBO": [],
   "PLAZA DE LAS AMERICAS": [
     {
       "fecha": "2026-06-13",
@@ -99,29 +44,6 @@
             "nombre": "Nado recreativo 25m prof 1.20m"
           },
           "cupos": 1
-        }
-      ]
-    },
-    {
-      "fecha": "2026-06-14",
-      "hora": "07:05",
-      "cupos": 2,
-      "raw_horario": {
-        "fecha": "2026-06-14",
-        "hora_inicio": "07:05:00",
-        "hora_fin": "07:55:00"
-      },
-      "zonas": [
-        {
-          "id": 2307,
-          "id_escenario": 607,
-          "escenario": "Bloc Plaza de las Américas Piscina",
-          "nombre": "Carril 1",
-          "caracteristica": {
-            "id": 591,
-            "nombre": "Nado recreativo 25m prof 1.20m"
-          },
-          "cupos": 2
         }
       ]
     },
@@ -174,7 +96,7 @@
     {
       "fecha": "2026-06-14",
       "hora": "14:05",
-      "cupos": 2,
+      "cupos": 1,
       "raw_horario": {
         "fecha": "2026-06-14",
         "hora_inicio": "14:05:00",
@@ -190,14 +112,14 @@
             "id": 591,
             "nombre": "Nado recreativo 25m prof 1.20m"
           },
-          "cupos": 2
+          "cupos": 1
         }
       ]
     },
     {
       "fecha": "2026-06-14",
       "hora": "16:35",
-      "cupos": 6,
+      "cupos": 4,
       "raw_horario": {
         "fecha": "2026-06-14",
         "hora_inicio": "16:35:00",
@@ -213,7 +135,7 @@
             "id": 591,
             "nombre": "Nado recreativo 25m prof 1.20m"
           },
-          "cupos": 6
+          "cupos": 4
         }
       ]
     },
@@ -266,117 +188,9 @@
   ],
   "CLUB LA COLINA": [
     {
-      "fecha": "2026-06-08",
-      "hora": "17:00",
-      "cupos": 1,
-      "raw_horario": {
-        "fecha": "2026-06-08",
-        "hora_inicio": "17:00:00",
-        "hora_fin": "17:50:00"
-      },
-      "zonas": [
-        {
-          "id": 923,
-          "id_escenario": 28,
-          "escenario": "Club La Colina Piscinas",
-          "nombre": "P1 Carril 1L - 25 m",
-          "cupos": 0
-        },
-        {
-          "id": 926,
-          "id_escenario": 28,
-          "escenario": "Club La Colina Piscinas",
-          "nombre": "P1 Carril 2L - 25 m",
-          "cupos": 0
-        },
-        {
-          "id": 932,
-          "id_escenario": 28,
-          "escenario": "Club La Colina Piscinas",
-          "nombre": "P1 Carril 3L - 25 m",
-          "cupos": 1
-        },
-        {
-          "id": 935,
-          "id_escenario": 28,
-          "escenario": "Club La Colina Piscinas",
-          "nombre": "P1 Carril 4L - 25 m",
-          "cupos": 0
-        },
-        {
-          "id": 938,
-          "id_escenario": 28,
-          "escenario": "Club La Colina Piscinas",
-          "nombre": "P1 Carril 5L",
-          "cupos": 0
-        },
-        {
-          "id": 929,
-          "id_escenario": 28,
-          "escenario": "Club La Colina Piscinas",
-          "nombre": "P1 Carril 6L",
-          "cupos": 0
-        }
-      ]
-    },
-    {
-      "fecha": "2026-06-11",
-      "hora": "20:00",
-      "cupos": 9,
-      "raw_horario": {
-        "fecha": "2026-06-11",
-        "hora_inicio": "20:00:00",
-        "hora_fin": "20:50:00"
-      },
-      "zonas": [
-        {
-          "id": 944,
-          "id_escenario": 28,
-          "escenario": "Club La Colina Piscinas",
-          "nombre": "P2 Carril 1L -25 m",
-          "cupos": 0
-        },
-        {
-          "id": 950,
-          "id_escenario": 28,
-          "escenario": "Club La Colina Piscinas",
-          "nombre": "P2 Carril 2L - 25 m",
-          "cupos": 0
-        },
-        {
-          "id": 941,
-          "id_escenario": 28,
-          "escenario": "Club La Colina Piscinas",
-          "nombre": "P2 Carril 3L - 25 m",
-          "cupos": 0
-        },
-        {
-          "id": 947,
-          "id_escenario": 28,
-          "escenario": "Club La Colina Piscinas",
-          "nombre": "P2 Carril 4L - 25 m",
-          "cupos": 0
-        },
-        {
-          "id": 953,
-          "id_escenario": 28,
-          "escenario": "Club La Colina Piscinas",
-          "nombre": "P2 Carril 5L - 25 m",
-          "cupos": 1
-        },
-        {
-          "id": 956,
-          "id_escenario": 28,
-          "escenario": "Club La Colina Piscinas",
-          "nombre": "P2 Carril 6L - 25 m",
-          "cupos": 8
-        }
-      ]
-    },
-    {
       "fecha": "2026-06-12",
       "hora": "20:00",
-      "cupos": 19,
+      "cupos": 14,
       "raw_horario": {
         "fecha": "2026-06-12",
         "hora_inicio": "20:00:00",
@@ -388,7 +202,7 @@
           "id_escenario": 28,
           "escenario": "Club La Colina Piscinas",
           "nombre": "P2 Carril 2L - 25 m",
-          "cupos": 3
+          "cupos": 0
         },
         {
           "id": 941,
@@ -409,7 +223,7 @@
           "id_escenario": 28,
           "escenario": "Club La Colina Piscinas",
           "nombre": "P2 Carril 5L - 25 m",
-          "cupos": 8
+          "cupos": 6
         },
         {
           "id": 956,

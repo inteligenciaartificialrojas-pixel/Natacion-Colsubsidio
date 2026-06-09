@@ -15,3 +15,8 @@ ENV/
 .idea/
 .DS_Store
 *.tmp
+
+# Application state files (caching)
+.cooldown_state
+.last_slots.json
+
