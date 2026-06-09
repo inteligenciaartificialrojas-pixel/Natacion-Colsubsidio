@@ -4,6 +4,8 @@ on:
   schedule:
     # Se ejecuta cada 10 minutos
     - cron: '*/10 * * * *'
+  repository_dispatch:
+    types: [check]
   workflow_dispatch:
     inputs:
       force:

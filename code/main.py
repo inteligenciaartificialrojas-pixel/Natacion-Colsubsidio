@@ -306,19 +306,48 @@ def main() -> None:
             logger.info("Chequeo único finalizado con éxito.")
         except SessionExpiredException as e:
             logger.error("La sesión de Colsubsidio ha expirado: %s", e)
-            current_time = time.time()
-            if current_time - state["last_expiry_alert_time"] > 86400:
-                msg = (
-                    "⚠️ *[Alerta de Revisor de Natación]*\n\n"
-                    "Tu sesión de Colsubsidio (cookie `sistema`) ha expirado o es inválida.\n"
-                    "Por favor, inicia sesión en la web, extrae la nueva cookie e insértala "
-                    "en tus variables de entorno para continuar con el monitoreo."
-                )
-                if notifier.send_message(msg):
-                    state["last_expiry_alert_time"] = current_time
-                    save_cooldown_state(state)
-                    logger.info("Alerta de sesión expirada enviada a Telegram.")
-            sys.exit(1)
+            refreshed = False
+            if sys.platform == "win32":
+                try:
+                    logger.info("Intentando auto-sanar: extrayendo nuevas cookies del navegador...")
+                    sys.path.append(os.path.dirname(__file__))
+                    from get_cookies import extract_colsubsidio_cookies, update_env_file
+                    cookies = extract_colsubsidio_cookies()
+                    if "sistema" in cookies and "Csrf-Token" in cookies:
+                        update_env_file(cookies)
+                        cookie_val = cookies["sistema"]
+                        csrf_val = cookies["Csrf-Token"]
+                        
+                        scraper.session.cookies.set("sistema", cookie_val, domain="www.diversioncolsubsidio.com")
+                        scraper.session.cookies.set("sistema", cookie_val, domain=".diversioncolsubsidio.com")
+                        scraper.session.cookies.set("sitio", cookie_val, domain="www.diversioncolsubsidio.com")
+                        scraper.session.cookies.set("sitio", cookie_val, domain=".diversioncolsubsidio.com")
+                        scraper.session.cookies.set("Csrf-Token", csrf_val, domain="www.diversioncolsubsidio.com")
+                        scraper.session.cookies.set("Csrf-Token", csrf_val, domain=".diversioncolsubsidio.com")
+                        
+                        logger.info("Cookies refrescadas con exito desde el navegador. Reintentando chequeo...")
+                        check_venues(scraper, notifier, force_send=send_full_report)
+                        if send_full_report:
+                            state["last_report_sent"] = report_key
+                        save_cooldown_state(state)
+                        refreshed = True
+                        logger.info("Chequeo único finalizado con éxito tras auto-sanación.")
+                except Exception as ex:
+                    logger.error("Fallo durante el intento de auto-sanar cookies: %s", ex)
+
+            if not refreshed:
+                current_time = time.time()
+                if current_time - state["last_expiry_alert_time"] > 86400:
+                    msg = (
+                        "⚠️ *[Alerta de Revisor de Natación]*\n\n"
+                        "Tu sesión de Colsubsidio (cookie `sistema`) ha expirado o es inválida.\n"
+                        "Por favor, abre la web de Colsubsidio en tu navegador para renovarla."
+                    )
+                    if notifier.send_message(msg):
+                        state["last_expiry_alert_time"] = current_time
+                        save_cooldown_state(state)
+                        logger.info("Alerta de sesión expirada enviada a Telegram.")
+                sys.exit(1)
         except Exception as e:
             logger.error("Error inesperado en la ejecución única: %s", e)
             sys.exit(1)
@@ -333,18 +362,47 @@ def main() -> None:
             logger.info("Chequeo finalizado. Durmiendo por %s segundos...", interval)
         except SessionExpiredException as e:
             logger.error("La sesión de Colsubsidio ha expirado: %s", e)
-            current_time = time.time()
-            if current_time - state["last_expiry_alert_time"] > 86400:
-                msg = (
-                    "⚠️ *[Alerta de Revisor de Natación]*\n\n"
-                    "Tu sesión de Colsubsidio (cookie `sistema`) ha expirado o es inválida.\n"
-                    "Por favor, inicia sesión en la web, extrae la nueva cookie e insértala "
-                    "en tus variables de entorno para continuar con el monitoreo."
-                )
-                if notifier.send_message(msg):
-                    state["last_expiry_alert_time"] = current_time
-                    save_cooldown_state(state)
-                    logger.info("Alerta de sesión expirada enviada a Telegram.")
+            refreshed = False
+            if sys.platform == "win32":
+                try:
+                    logger.info("Intentando auto-sanar: extrayendo nuevas cookies del navegador...")
+                    sys.path.append(os.path.dirname(__file__))
+                    from get_cookies import extract_colsubsidio_cookies, update_env_file
+                    cookies = extract_colsubsidio_cookies()
+                    if "sistema" in cookies and "Csrf-Token" in cookies:
+                        update_env_file(cookies)
+                        cookie_val = cookies["sistema"]
+                        csrf_val = cookies["Csrf-Token"]
+                        
+                        scraper.session.cookies.set("sistema", cookie_val, domain="www.diversioncolsubsidio.com")
+                        scraper.session.cookies.set("sistema", cookie_val, domain=".diversioncolsubsidio.com")
+                        scraper.session.cookies.set("sitio", cookie_val, domain="www.diversioncolsubsidio.com")
+                        scraper.session.cookies.set("sitio", cookie_val, domain=".diversioncolsubsidio.com")
+                        scraper.session.cookies.set("Csrf-Token", csrf_val, domain="www.diversioncolsubsidio.com")
+                        scraper.session.cookies.set("Csrf-Token", csrf_val, domain=".diversioncolsubsidio.com")
+                        
+                        logger.info("Cookies refrescadas con exito desde el navegador. Reintentando chequeo...")
+                        check_venues(scraper, notifier, force_send=send_full_report)
+                        if send_full_report:
+                            state["last_report_sent"] = report_key
+                        save_cooldown_state(state)
+                        refreshed = True
+                except Exception as ex:
+                    logger.error("Fallo durante el intento de auto-sanar cookies: %s", ex)
+
+            if not refreshed:
+                current_time = time.time()
+                if current_time - state["last_expiry_alert_time"] > 86400:
+                    msg = (
+                        "⚠️ *[Alerta de Revisor de Natación]*\n\n"
+                        "Tu sesión de Colsubsidio (cookie `sistema`) ha expirado o es inválida.\n"
+                        "Por favor, abre la web de Colsubsidio en tu navegador para renovarla "
+                        "y deja el revisor corriendo localmente para que se sincronice solo."
+                    )
+                    if notifier.send_message(msg):
+                        state["last_expiry_alert_time"] = current_time
+                        save_cooldown_state(state)
+                        logger.info("Alerta de sesión expirada enviada a Telegram.")
         except Exception as e:
             logger.error("Error inesperado en el loop principal: %s", e)
 
