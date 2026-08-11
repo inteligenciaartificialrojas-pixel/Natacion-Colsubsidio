@@ -161,7 +161,8 @@ def login_and_get_cookies(
         context = browser.new_context()
         page = context.new_page()
 
-        page.goto(LOGIN_URL, wait_until="networkidle")
+        page.goto(LOGIN_URL, wait_until="domcontentloaded", timeout=60000)
+        page.wait_for_timeout(2000)
 
         doc_type = os.environ.get("COLSUBSIDIO_DOCUMENT_TYPE")
         if not doc_type and config and hasattr(config, "COLSUBSIDIO_DOCUMENT_TYPE"):
@@ -202,10 +203,17 @@ def login_and_get_cookies(
 
         if submit_sel:
             page.click(submit_sel)
-            page.wait_for_load_state("networkidle")
         elif user_sel and pass_sel:
             page.keyboard.press("Enter")
-            page.wait_for_load_state("networkidle")
+
+        # Esperar a que se procese el inicio de sesión y se establezcan las cookies
+        for _ in range(15):
+            cookies_list = context.cookies()
+            has_sistema = any(c.get("name") == "sistema" and c.get("value") for c in cookies_list)
+            has_csrf = any(c.get("name") in ("Csrf-Token", "csrf-token", "CSRF-TOKEN") and c.get("value") for c in cookies_list)
+            if has_sistema and has_csrf:
+                break
+            page.wait_for_timeout(1000)
 
         cookies_list = context.cookies()
         browser.close()
