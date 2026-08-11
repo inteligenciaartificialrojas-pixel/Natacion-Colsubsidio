@@ -404,23 +404,45 @@ def update_env_file(cookies: dict[str, str], env_path: str | None = None) -> boo
         print(f"Error al escribir en .env: {e}")
         return False
 
+def find_gh_binary() -> str | None:
+    import shutil
+    gh_path = shutil.which("gh")
+    if gh_path:
+        return gh_path
+    
+    candidate_paths = [
+        r"C:\Program Files\GitHub CLI\gh.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Programs\GitHub CLI\gh.exe"),
+        r"C:\Program Files (x86)\GitHub CLI\gh.exe"
+    ]
+    for p in candidate_paths:
+        if os.path.exists(p):
+            return p
+    return None
+
 def sync_secrets_to_github(cookies: dict[str, str]) -> bool:
     """Intenta sincronizar los secretos de GitHub usando la herramienta oficial gh CLI."""
     import subprocess
+    gh_bin = find_gh_binary()
+    if not gh_bin:
+        print("No se encontró la herramienta gh CLI instalada en el sistema.")
+        return False
+
     try:
-        result = subprocess.run(["gh", "auth", "status"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        result = subprocess.run([gh_bin, "auth", "status"], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         if result.returncode != 0:
+            print("[Aviso] gh CLI no está autenticado en GitHub. Ejecuta 'gh auth login' en la consola una sola vez para permitir la sincronización automática de secretos.")
             return False
 
         print("\nSincronizando cookies con los secretos de GitHub usando gh CLI...")
         
         subprocess.run(
-            ["gh", "secret", "set", "COLSUBSIDIO_SISTEMA_COOKIE", "--body", cookies["sistema"]],
+            [gh_bin, "secret", "set", "COLSUBSIDIO_SISTEMA_COOKIE", "--body", cookies["sistema"]],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
         )
         
         subprocess.run(
-            ["gh", "secret", "set", "COLSUBSIDIO_CSRF_TOKEN", "--body", cookies["Csrf-Token"]],
+            [gh_bin, "secret", "set", "COLSUBSIDIO_CSRF_TOKEN", "--body", cookies["Csrf-Token"]],
             stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True
         )
         
