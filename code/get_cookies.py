@@ -208,6 +208,9 @@ def login_and_get_cookies(
         pass_locator = page.locator('input[name="password"]:visible, input[name="clave"]:visible, input[name="pass"]:visible, #clave:visible, #password:visible, input[type="password"]:visible').first
         pass_locator.fill(pass_val)
 
+        # Capturar el valor de la cookie 'sistema' inicial (cookie anónima/invitado)
+        initial_sistema = next((c.get("value") for c in context.cookies() if c.get("name") == "sistema"), None)
+
         # Enviar formulario
         btn_submit = page.locator('input[type="submit"]:visible, button[type="submit"]:visible, #btnIngresar:visible, #btn-ingresar:visible, button:has-text("Ingresar"):visible, button:has-text("Iniciar"):visible').first
         try:
@@ -218,14 +221,17 @@ def login_and_get_cookies(
             except Exception:
                 pass
 
-        # Esperar a que se procese el inicio de sesión y se establezcan las cookies de Colsubsidio
-        for _ in range(20):
-            cookies_list = context.cookies()
-            has_sistema = any(c.get("name") == "sistema" and c.get("value") for c in cookies_list)
-            has_csrf = any(c.get("name") in ("Csrf-Token", "csrf-token", "CSRF-TOKEN") and c.get("value") for c in cookies_list)
-            if has_sistema and has_csrf:
-                break
+        # Esperar a que se procese el inicio de sesión y cambie la cookie 'sistema' o redirija fuera de CIAM
+        for _ in range(25):
             page.wait_for_timeout(1000)
+            curr_url = page.url
+            current_cookies = context.cookies()
+            curr_sistema = next((c.get("value") for c in current_cookies if c.get("name") == "sistema"), None)
+
+            if curr_sistema and curr_sistema != initial_sistema:
+                break
+            if "login/ciam" not in curr_url and "sistema.php" not in curr_url and "diversioncolsubsidio.com" in curr_url:
+                break
 
         cookies_list = context.cookies()
         browser.close()

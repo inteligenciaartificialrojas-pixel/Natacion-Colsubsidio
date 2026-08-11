@@ -346,7 +346,7 @@ def main() -> None:
                         state["last_expiry_alert_time"] = current_time
                         save_cooldown_state(state)
                         logger.info("Alerta de sesión expirada enviada a Telegram.")
-                sys.exit(1)
+                sys.exit(0)
         except Exception as e:
             logger.error("Error inesperado en la ejecución única: %s", e)
             sys.exit(1)
