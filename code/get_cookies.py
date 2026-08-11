@@ -157,12 +157,36 @@ def login_and_get_cookies(
     headless_bool = False if str(headless).lower() in ("false", "0") else bool(headless)
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=headless_bool)
-        context = browser.new_context()
+        browser = p.chromium.launch(
+            headless=headless_bool,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-infobars",
+                "--window-position=0,0",
+                "--ignore-certificate-errors",
+                "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            ]
+        )
+        context = browser.new_context(
+            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            viewport={"width": 1280, "height": 720},
+            locale="es-CO",
+            timezone_id="America/Bogota"
+        )
         page = context.new_page()
 
+        page.add_init_script("""
+            Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+            window.chrome = { runtime: {} };
+        """)
+
         page.goto(LOGIN_URL, wait_until="domcontentloaded", timeout=60000)
-        page.wait_for_timeout(2000)
+
+        # Esperar a que cargue el formulario visible de inicio de sesión de CIAM/Gigya
+        doc_locator = page.locator('input[name="data.numeroDocumento"]:visible, input[name="documento"]:visible, input[name="usuario"]:visible, input[name="user"]:visible, #documento:visible, #usuario:visible').first
+        doc_locator.wait_for(state="visible", timeout=30000)
 
         doc_type = os.environ.get("COLSUBSIDIO_DOCUMENT_TYPE")
         if not doc_type and config and hasattr(config, "COLSUBSIDIO_DOCUMENT_TYPE"):
@@ -171,43 +195,31 @@ def login_and_get_cookies(
             doc_type = "CC"
 
         # Seleccionar tipo de documento si existe el campo
-        if page.query_selector('select[name="tipo_documento"]'):
-            page.select_option('select[name="tipo_documento"]', doc_type)
-        elif page.query_selector('#tipo_documento'):
-            page.select_option('#tipo_documento', doc_type)
+        sel_type = page.locator('select[name="data.tpIdentificacion"]:visible, select[name="tipo_documento"]:visible, #tipo_documento:visible').first
+        try:
+            sel_type.select_option(doc_type)
+        except Exception:
+            pass
 
-        # Rellenar usuario / documento
-        user_sel = None
-        for sel in ['input[name="documento"]', 'input[name="usuario"]', 'input[name="user"]', '#documento', '#usuario', 'input[type="text"]']:
-            if page.query_selector(sel):
-                user_sel = sel
-                break
-        if user_sel:
-            page.fill(user_sel, user_val)
+        # Rellenar número de documento / usuario
+        doc_locator.fill(user_val)
 
         # Rellenar clave / contraseña
-        pass_sel = None
-        for sel in ['input[name="clave"]', 'input[name="password"]', 'input[name="pass"]', '#clave', '#password', 'input[type="password"]']:
-            if page.query_selector(sel):
-                pass_sel = sel
-                break
-        if pass_sel:
-            page.fill(pass_sel, pass_val)
+        pass_locator = page.locator('input[name="password"]:visible, input[name="clave"]:visible, input[name="pass"]:visible, #clave:visible, #password:visible, input[type="password"]:visible').first
+        pass_locator.fill(pass_val)
 
         # Enviar formulario
-        submit_sel = None
-        for sel in ['button[type="submit"]', 'input[type="submit"]', '#btnIngresar', '#btn-ingresar', 'form button']:
-            if page.query_selector(sel):
-                submit_sel = sel
-                break
+        btn_submit = page.locator('input[type="submit"]:visible, button[type="submit"]:visible, #btnIngresar:visible, #btn-ingresar:visible, button:has-text("Ingresar"):visible, button:has-text("Iniciar"):visible').first
+        try:
+            btn_submit.click()
+        except Exception:
+            try:
+                pass_locator.press("Enter")
+            except Exception:
+                pass
 
-        if submit_sel:
-            page.click(submit_sel)
-        elif user_sel and pass_sel:
-            page.keyboard.press("Enter")
-
-        # Esperar a que se procese el inicio de sesión y se establezcan las cookies
-        for _ in range(15):
+        # Esperar a que se procese el inicio de sesión y se establezcan las cookies de Colsubsidio
+        for _ in range(20):
             cookies_list = context.cookies()
             has_sistema = any(c.get("name") == "sistema" and c.get("value") for c in cookies_list)
             has_csrf = any(c.get("name") in ("Csrf-Token", "csrf-token", "CSRF-TOKEN") and c.get("value") for c in cookies_list)
