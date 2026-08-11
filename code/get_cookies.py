@@ -114,7 +114,7 @@ def find_cookie_databases(user_data_path: str) -> list[str]:
 def login_and_get_cookies(
     user: str | None = None,
     password: str | None = None,
-    headless: bool = True
+    headless: bool = False
 ) -> dict[str, str]:
     """Inicia sesión automáticamente en Colsubsidio usando Playwright Chromium y extrae las cookies de sesión.
 
@@ -221,17 +221,15 @@ def login_and_get_cookies(
             except Exception:
                 pass
 
-        # Esperar a que se procese el inicio de sesión y cambie la cookie 'sistema' o redirija fuera de CIAM
-        for _ in range(25):
-            page.wait_for_timeout(1000)
-            curr_url = page.url
-            current_cookies = context.cookies()
-            curr_sistema = next((c.get("value") for c in current_cookies if c.get("name") == "sistema"), None)
+        # Esperar a que se procese la respuesta de autenticación de Gigya CIAM
+        page.wait_for_timeout(4000)
 
-            if curr_sistema and curr_sistema != initial_sistema:
-                break
-            if "login/ciam" not in curr_url and "sistema.php" not in curr_url and "diversioncolsubsidio.com" in curr_url:
-                break
+        # Navegar de vuelta al sitio principal para que PHP intercambie el token SAML por la cookie de sesión autenticada
+        try:
+            page.goto("https://www.diversioncolsubsidio.com/deportes-practica-libre-natacion", wait_until="domcontentloaded", timeout=30000)
+            page.wait_for_timeout(3000)
+        except Exception:
+            pass
 
         cookies_list = context.cookies()
         browser.close()
@@ -391,7 +389,18 @@ def update_env_file(cookies: dict[str, str], env_path: str | None = None) -> boo
         try:
             with os.fdopen(fd, "w", encoding="utf-8", errors="replace") as f:
                 f.writelines(new_lines)
-            os.replace(temp_path, env_path)
+
+            replaced = False
+            for attempt in range(10):
+                try:
+                    os.replace(temp_path, env_path)
+                    replaced = True
+                    break
+                except (PermissionError, OSError):
+                    time.sleep(0.05)
+
+            if not replaced:
+                os.replace(temp_path, env_path)
             return True
         except Exception:
             if os.path.exists(temp_path):
