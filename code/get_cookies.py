@@ -186,7 +186,7 @@ def login_and_get_cookies(
 
         # Esperar a que cargue el formulario visible de inicio de sesión de CIAM/Gigya
         doc_locator = page.locator('input[name="data.numeroDocumento"]:visible, input[name="documento"]:visible, input[name="usuario"]:visible, input[name="user"]:visible, #documento:visible, #usuario:visible').first
-        doc_locator.wait_for(state="visible", timeout=30000)
+        doc_locator.wait_for(state="visible", timeout=12000)
 
         doc_type = os.environ.get("COLSUBSIDIO_DOCUMENT_TYPE")
         if not doc_type and config and hasattr(config, "COLSUBSIDIO_DOCUMENT_TYPE"):
@@ -281,7 +281,12 @@ def extract_local_browser_cookies() -> dict[str, str]:
             fd, temp_db = tempfile.mkstemp(suffix=".sqlite")
             os.close(fd)
             try:
-                shutil.copyfile(db_path, temp_db)
+                try:
+                    shutil.copyfile(db_path, temp_db)
+                except (PermissionError, OSError):
+                    with open(db_path, "rb") as f_in:
+                        with open(temp_db, "wb") as f_out:
+                            f_out.write(f_in.read())
                 conn = sqlite3.connect(temp_db)
                 cursor = conn.cursor()
                 cursor.execute(
@@ -292,7 +297,7 @@ def extract_local_browser_cookies() -> dict[str, str]:
                     if decrypted:
                         if name == "sistema":
                             extracted["sistema"] = decrypted
-                        elif name == "Csrf-Token":
+                        elif name in ("Csrf-Token", "csrf-token", "CSRF-TOKEN"):
                             extracted["Csrf-Token"] = decrypted
                 conn.close()
             except Exception as e:
