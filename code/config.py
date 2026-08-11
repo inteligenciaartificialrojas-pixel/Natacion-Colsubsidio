@@ -5,7 +5,7 @@ import os
 # Cargar archivo .env local si existe (evitando dependencias externas)
 _env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
 if os.path.exists(_env_path):
-    with open(_env_path, "r", encoding="utf-8") as _f:
+    with open(_env_path, "r", encoding="utf-8", errors="replace") as _f:
         for _line in _f:
             _line = _line.strip()
             if not _line or _line.startswith("#"):
@@ -21,6 +21,8 @@ TELEGRAM_TOKEN: str | None = os.environ.get("TELEGRAM_TOKEN")
 TELEGRAM_CHAT_ID: str | None = os.environ.get("TELEGRAM_CHAT_ID")
 
 # Credenciales y Sesión de Colsubsidio
+COLSUBSIDIO_USER: str | None = os.environ.get("COLSUBSIDIO_USER")
+COLSUBSIDIO_PASS: str | None = os.environ.get("COLSUBSIDIO_PASS")
 COLSUBSIDIO_SISTEMA_COOKIE: str | None = os.environ.get("COLSUBSIDIO_SISTEMA_COOKIE")
 COLSUBSIDIO_CSRF_TOKEN: str | None = os.environ.get("COLSUBSIDIO_CSRF_TOKEN")
 COLSUBSIDIO_DOCUMENT_TYPE: str = os.environ.get("COLSUBSIDIO_DOCUMENT_TYPE", "CC")

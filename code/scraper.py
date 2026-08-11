@@ -23,21 +23,68 @@ class ColsubsidioScraper:
         cookie_val = session_cookie or COLSUBSIDIO_SISTEMA_COOKIE
         csrf_val = csrf_token or COLSUBSIDIO_CSRF_TOKEN
 
-        if cookie_val:
-            self.session.cookies.set("sistema", cookie_val, domain="www.diversioncolsubsidio.com")
-            self.session.cookies.set("sistema", cookie_val, domain=".diversioncolsubsidio.com")
-            self.session.cookies.set("sitio", cookie_val, domain="www.diversioncolsubsidio.com")
-            self.session.cookies.set("sitio", cookie_val, domain=".diversioncolsubsidio.com")
-        if csrf_val:
-            self.session.cookies.set("Csrf-Token", csrf_val, domain="www.diversioncolsubsidio.com")
-            self.session.cookies.set("Csrf-Token", csrf_val, domain=".diversioncolsubsidio.com")
-
         self.session.headers.update({
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Accept": "application/json",
             "Content-Type": "application/json",
             "Referer": "https://www.diversioncolsubsidio.com/deportes-practica-libre-natacion"
         })
+
+        if cookie_val or csrf_val:
+            cookies_dict = {}
+            if cookie_val:
+                cookies_dict["sistema"] = cookie_val
+            if csrf_val:
+                cookies_dict["Csrf-Token"] = csrf_val
+            self.update_session_credentials(cookies_dict)
+
+    def update_session_credentials(self, cookies: dict[str, str]) -> None:
+        """Actualiza en memoria las cookies (sistema, sitio, Csrf-Token) y los headers (Csrf-Token)."""
+        sistema_val = cookies.get("sistema")
+        csrf_val = cookies.get("Csrf-Token") or cookies.get("csrf-token") or cookies.get("CSRF-TOKEN")
+        
+        if sistema_val:
+            self.session.cookies.set("sistema", sistema_val, domain="www.diversioncolsubsidio.com")
+            self.session.cookies.set("sistema", sistema_val, domain=".diversioncolsubsidio.com")
+            self.session.cookies.set("sitio", sistema_val, domain="www.diversioncolsubsidio.com")
+            self.session.cookies.set("sitio", sistema_val, domain=".diversioncolsubsidio.com")
+        if csrf_val:
+            self.session.cookies.set("Csrf-Token", csrf_val, domain="www.diversioncolsubsidio.com")
+            self.session.cookies.set("Csrf-Token", csrf_val, domain=".diversioncolsubsidio.com")
+            self.session.headers["Csrf-Token"] = csrf_val
+
+    def _renew_session(self) -> dict[str, str]:
+        """Intenta renovar la sesión mediante Playwright o extracción local de cookies,
+        actualizando la sesión en memoria y guardando las nuevas cookies en el archivo .env.
+        """
+        logger.info("Iniciando renovación de sesión de Colsubsidio...")
+        from get_cookies import extract_colsubsidio_cookies, update_env_file
+
+        new_cookies = extract_colsubsidio_cookies()
+        if not new_cookies or "sistema" not in new_cookies:
+            raise SessionExpiredException("No se pudieron obtener nuevas cookies de sesión durante la renovación.")
+
+        self.update_session_credentials(new_cookies)
+        update_env_file(new_cookies)
+        logger.info("Sesión renovada con éxito. Cookies e in-memory headers actualizados.")
+        return new_cookies
+
+    def _execute_with_retry(self, func, max_retries: int = 1):
+        """Ejecuta una función que realiza una petición HTTP a la API.
+        Si se detecta SessionExpiredException, renueva la sesión y reintenta hasta max_retries veces.
+        """
+        attempts = 0
+        while True:
+            try:
+                return func()
+            except SessionExpiredException as exc:
+                if attempts < max_retries:
+                    attempts += 1
+                    logger.warning("Sesión expirada detectada (intento %d/%d). Renovando sesión...", attempts, max_retries)
+                    self._renew_session()
+                else:
+                    logger.error("La sesión expiró y se superó el límite de reintentos (%d).", max_retries)
+                    raise
 
     def _check_unauthorized(self, response: requests.Response) -> None:
         """Verifica si la respuesta indica que la sesión no está autorizada."""
@@ -77,10 +124,14 @@ class ColsubsidioScraper:
             }
         }
 
-        try:
+        def _make_request():
             logger.info("Consultando calendario para servicio ID %s...", service_id)
             response = self.session.post(url, json=payload, timeout=15)
             self._check_unauthorized(response)
+            return response
+
+        try:
+            response = self._execute_with_retry(_make_request)
 
             if response.status_code != 200:
                 logger.warning("Error HTTP al obtener calendario: %s", response.status_code)
@@ -140,10 +191,14 @@ class ColsubsidioScraper:
             }
         }
 
-        try:
+        def _make_request():
             logger.info("Consultando horarios para fecha %s en servicio %s...", date_str, service_id)
             response = self.session.post(url, json=payload, timeout=15)
             self._check_unauthorized(response)
+            return response
+
+        try:
+            response = self._execute_with_retry(_make_request)
 
             if response.status_code != 200:
                 logger.warning("Error HTTP al obtener horarios para %s: %s", date_str, response.status_code)
@@ -260,10 +315,14 @@ class ColsubsidioScraper:
 
         url = f"https://www.diversioncolsubsidio.com/v1/centro_entrenamiento/{service_id}/practicalibre/reservar"
 
-        try:
+        def _make_request():
             logger.info("Realizando petición de reserva al servicio %s...", service_id)
             response = self.session.post(url, json=payload, timeout=20)
             self._check_unauthorized(response)
+            return response
+
+        try:
+            response = self._execute_with_retry(_make_request)
 
             if response.status_code in [200, 201]:
                 res_data = response.json()
@@ -283,3 +342,4 @@ class ColsubsidioScraper:
         except Exception as e:
             logger.error("Error al procesar la reserva: %s", e)
             return False, f"Fallo en la comunicación con Colsubsidio: {e}"
+

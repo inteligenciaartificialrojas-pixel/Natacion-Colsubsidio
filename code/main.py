@@ -307,33 +307,32 @@ def main() -> None:
         except SessionExpiredException as e:
             logger.error("La sesión de Colsubsidio ha expirado: %s", e)
             refreshed = False
-            if sys.platform == "win32":
-                try:
-                    logger.info("Intentando auto-sanar: extrayendo nuevas cookies del navegador...")
-                    sys.path.append(os.path.dirname(__file__))
-                    from get_cookies import extract_colsubsidio_cookies, update_env_file
-                    cookies = extract_colsubsidio_cookies()
-                    if "sistema" in cookies and "Csrf-Token" in cookies:
-                        update_env_file(cookies)
-                        cookie_val = cookies["sistema"]
-                        csrf_val = cookies["Csrf-Token"]
-                        
-                        scraper.session.cookies.set("sistema", cookie_val, domain="www.diversioncolsubsidio.com")
-                        scraper.session.cookies.set("sistema", cookie_val, domain=".diversioncolsubsidio.com")
-                        scraper.session.cookies.set("sitio", cookie_val, domain="www.diversioncolsubsidio.com")
-                        scraper.session.cookies.set("sitio", cookie_val, domain=".diversioncolsubsidio.com")
-                        scraper.session.cookies.set("Csrf-Token", csrf_val, domain="www.diversioncolsubsidio.com")
-                        scraper.session.cookies.set("Csrf-Token", csrf_val, domain=".diversioncolsubsidio.com")
-                        
-                        logger.info("Cookies refrescadas con exito desde el navegador. Reintentando chequeo...")
-                        check_venues(scraper, notifier, force_send=send_full_report)
-                        if send_full_report:
-                            state["last_report_sent"] = report_key
-                        save_cooldown_state(state)
-                        refreshed = True
-                        logger.info("Chequeo único finalizado con éxito tras auto-sanación.")
-                except Exception as ex:
-                    logger.error("Fallo durante el intento de auto-sanar cookies: %s", ex)
+            try:
+                logger.info("Intentando auto-sanar: extrayendo nuevas cookies del navegador...")
+                sys.path.append(os.path.dirname(__file__))
+                from get_cookies import extract_colsubsidio_cookies, update_env_file
+                cookies = extract_colsubsidio_cookies()
+                if "sistema" in cookies and "Csrf-Token" in cookies:
+                    update_env_file(cookies)
+                    cookie_val = cookies["sistema"]
+                    csrf_val = cookies["Csrf-Token"]
+                    
+                    scraper.session.cookies.set("sistema", cookie_val, domain="www.diversioncolsubsidio.com")
+                    scraper.session.cookies.set("sistema", cookie_val, domain=".diversioncolsubsidio.com")
+                    scraper.session.cookies.set("sitio", cookie_val, domain="www.diversioncolsubsidio.com")
+                    scraper.session.cookies.set("sitio", cookie_val, domain=".diversioncolsubsidio.com")
+                    scraper.session.cookies.set("Csrf-Token", csrf_val, domain="www.diversioncolsubsidio.com")
+                    scraper.session.cookies.set("Csrf-Token", csrf_val, domain=".diversioncolsubsidio.com")
+                    
+                    logger.info("Cookies refrescadas con exito desde el navegador. Reintentando chequeo...")
+                    check_venues(scraper, notifier, force_send=send_full_report)
+                    if send_full_report:
+                        state["last_report_sent"] = report_key
+                    save_cooldown_state(state)
+                    refreshed = True
+                    logger.info("Chequeo único finalizado con éxito tras auto-sanación.")
+            except Exception as ex:
+                logger.error("Fallo durante el intento de auto-sanar cookies: %s", ex)
 
             if not refreshed:
                 current_time = time.time()
@@ -363,32 +362,31 @@ def main() -> None:
         except SessionExpiredException as e:
             logger.error("La sesión de Colsubsidio ha expirado: %s", e)
             refreshed = False
-            if sys.platform == "win32":
-                try:
-                    logger.info("Intentando auto-sanar: extrayendo nuevas cookies del navegador...")
-                    sys.path.append(os.path.dirname(__file__))
-                    from get_cookies import extract_colsubsidio_cookies, update_env_file
-                    cookies = extract_colsubsidio_cookies()
-                    if "sistema" in cookies and "Csrf-Token" in cookies:
-                        update_env_file(cookies)
-                        cookie_val = cookies["sistema"]
-                        csrf_val = cookies["Csrf-Token"]
-                        
-                        scraper.session.cookies.set("sistema", cookie_val, domain="www.diversioncolsubsidio.com")
-                        scraper.session.cookies.set("sistema", cookie_val, domain=".diversioncolsubsidio.com")
-                        scraper.session.cookies.set("sitio", cookie_val, domain="www.diversioncolsubsidio.com")
-                        scraper.session.cookies.set("sitio", cookie_val, domain=".diversioncolsubsidio.com")
-                        scraper.session.cookies.set("Csrf-Token", csrf_val, domain="www.diversioncolsubsidio.com")
-                        scraper.session.cookies.set("Csrf-Token", csrf_val, domain=".diversioncolsubsidio.com")
-                        
-                        logger.info("Cookies refrescadas con exito desde el navegador. Reintentando chequeo...")
-                        check_venues(scraper, notifier, force_send=send_full_report)
-                        if send_full_report:
-                            state["last_report_sent"] = report_key
-                        save_cooldown_state(state)
-                        refreshed = True
-                except Exception as ex:
-                    logger.error("Fallo durante el intento de auto-sanar cookies: %s", ex)
+            try:
+                logger.info("Intentando auto-sanar: extrayendo nuevas cookies del navegador...")
+                sys.path.append(os.path.dirname(__file__))
+                from get_cookies import extract_colsubsidio_cookies, update_env_file
+                cookies = extract_colsubsidio_cookies()
+                if "sistema" in cookies and "Csrf-Token" in cookies:
+                    update_env_file(cookies)
+                    cookie_val = cookies["sistema"]
+                    csrf_val = cookies["Csrf-Token"]
+                    
+                    scraper.session.cookies.set("sistema", cookie_val, domain="www.diversioncolsubsidio.com")
+                    scraper.session.cookies.set("sistema", cookie_val, domain=".diversioncolsubsidio.com")
+                    scraper.session.cookies.set("sitio", cookie_val, domain="www.diversioncolsubsidio.com")
+                    scraper.session.cookies.set("sitio", cookie_val, domain=".diversioncolsubsidio.com")
+                    scraper.session.cookies.set("Csrf-Token", csrf_val, domain="www.diversioncolsubsidio.com")
+                    scraper.session.cookies.set("Csrf-Token", csrf_val, domain=".diversioncolsubsidio.com")
+                    
+                    logger.info("Cookies refrescadas con exito desde el navegador. Reintentando chequeo...")
+                    check_venues(scraper, notifier, force_send=send_full_report)
+                    if send_full_report:
+                        state["last_report_sent"] = report_key
+                    save_cooldown_state(state)
+                    refreshed = True
+            except Exception as ex:
+                logger.error("Fallo durante el intento de auto-sanar cookies: %s", ex)
 
             if not refreshed:
                 current_time = time.time()
