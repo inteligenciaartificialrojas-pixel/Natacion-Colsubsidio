@@ -115,13 +115,13 @@ def find_cookie_databases(user_data_path: str) -> list[str]:
 def login_and_get_cookies(
     user: str | None = None,
     password: str | None = None,
-    headless: bool = False
+    headless: bool = True
 ) -> dict[str, str]:
     """Inicia sesión automáticamente en Colsubsidio usando Playwright Chromium y extrae las cookies de sesión.
 
     :param user: Usuario o número de documento de Colsubsidio.
     :param password: Contraseña de la cuenta.
-    :param headless: Si se ejecuta el navegador en modo sin cabeza (True) o visible (False).
+    :param headless: Si se ejecuta el navegador en modo sin cabeza (True por defecto) o visible (False).
     :return: Diccionario con cookies {"sistema": ..., "Csrf-Token": ...}.
     :raises ValueError: Si no se suministran credenciales.
     :raises RuntimeError: Si el inicio de sesión falla o no se obtienen las cookies.
@@ -155,7 +155,11 @@ def login_and_get_cookies(
     except ImportError:
         raise RuntimeError("El paquete 'playwright' no está instalado. Instálalo con 'pip install playwright'.")
 
-    headless_bool = False if str(headless).lower() in ("false", "0") else bool(headless)
+    is_ci = os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS")
+    if is_ci:
+        headless_bool = True
+    else:
+        headless_bool = False if str(headless).lower() in ("false", "0") else True
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
