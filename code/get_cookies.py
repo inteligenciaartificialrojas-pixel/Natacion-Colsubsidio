@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import time
 import sys
 import json
 import base64
@@ -334,6 +335,10 @@ def extract_colsubsidio_cookies() -> dict[str, str]:
 
     return {}
 
+import threading
+
+_env_lock = threading.Lock()
+
 def update_env_file(cookies: dict[str, str], env_path: str | None = None) -> bool:
     """Actualiza el archivo .env local con los nuevos valores de cookies de forma atómica y segura."""
     if env_path is None:
@@ -354,64 +359,65 @@ def update_env_file(cookies: dict[str, str], env_path: str | None = None) -> boo
         env_k = ENV_KEY_MAP.get(k, k)
         updates_to_make[env_k] = clean_v
 
-    lines = []
-    if os.path.exists(env_path):
+    with _env_lock:
+        lines = []
+        if os.path.exists(env_path):
+            try:
+                with open(env_path, "r", encoding="utf-8", errors="replace") as f:
+                    lines = f.readlines()
+            except Exception:
+                lines = []
+
         try:
-            with open(env_path, "r", encoding="utf-8", errors="replace") as f:
-                lines = f.readlines()
-        except Exception:
-            lines = []
+            new_lines = []
+            updated_keys = set()
 
-    try:
-        new_lines = []
-        updated_keys = set()
-
-        for line in lines:
-            stripped = line.strip()
-            if stripped and not stripped.startswith("#") and "=" in line:
-                key_part, _, _ = line.partition("=")
-                key_name = key_part.strip()
-                if key_name in updates_to_make:
-                    new_lines.append(f"{key_name}={updates_to_make[key_name]}\n")
-                    updated_keys.add(key_name)
+            for line in lines:
+                stripped = line.strip()
+                if stripped and not stripped.startswith("#") and "=" in line:
+                    key_part, _, _ = line.partition("=")
+                    key_name = key_part.strip()
+                    if key_name in updates_to_make:
+                        new_lines.append(f"{key_name}={updates_to_make[key_name]}\n")
+                        updated_keys.add(key_name)
+                    else:
+                        new_lines.append(line)
                 else:
                     new_lines.append(line)
-            else:
-                new_lines.append(line)
 
-        for key_name, val in updates_to_make.items():
-            if key_name not in updated_keys:
-                if new_lines and not new_lines[-1].endswith("\n"):
-                    new_lines[-1] += "\n"
-                new_lines.append(f"{key_name}={val}\n")
+            for key_name, val in updates_to_make.items():
+                if key_name not in updated_keys:
+                    if new_lines and not new_lines[-1].endswith("\n"):
+                        new_lines[-1] += "\n"
+                    new_lines.append(f"{key_name}={val}\n")
 
-        fd, temp_path = tempfile.mkstemp(dir=env_dir, prefix=".env_", suffix=".tmp")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8", errors="replace") as f:
-                f.writelines(new_lines)
+            fd, temp_path = tempfile.mkstemp(dir=env_dir, prefix=".env_", suffix=".tmp")
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8", errors="replace") as f:
+                    f.writelines(new_lines)
 
-            replaced = False
-            for attempt in range(10):
-                try:
+                replaced = False
+                for attempt in range(10):
+                    try:
+                        os.replace(temp_path, env_path)
+                        replaced = True
+                        break
+                    except (PermissionError, OSError):
+                        time.sleep(0.05)
+
+                if not replaced:
                     os.replace(temp_path, env_path)
-                    replaced = True
-                    break
-                except (PermissionError, OSError):
-                    time.sleep(0.05)
-
-            if not replaced:
-                os.replace(temp_path, env_path)
-            return True
-        except Exception:
-            if os.path.exists(temp_path):
-                try:
-                    os.remove(temp_path)
-                except Exception:
-                    pass
-            raise
-    except Exception as e:
-        print(f"Error al escribir en .env: {e}")
-        return False
+                return True
+            except Exception:
+                if os.path.exists(temp_path):
+                    try:
+                        os.remove(temp_path)
+                    except Exception:
+                        pass
+                raise
+        except Exception as e:
+            print(f"Error al escribir en .env: {e}")
+            return False
 
 def find_gh_binary() -> str | None:
     import shutil

@@ -1,189 +1,188 @@
-# Detailed Architecture & Self-Healing Analysis — Milestone 1 (Explorer 2)
+# Analysis Report — Milestone 1: Legacy Code Removal in CLI & Notifier Modules
 
-**Workspace**: `i:\Mi unidad\Natacion Colsubsidio`  
-**Working Directory**: `i:\Mi unidad\Natacion Colsubsidio\.agents\explorer_m1_2`  
-**Date**: 2026-08-09  
+**Agent**: `teamwork_preview_explorer` (`explorer_m1_2`)  
+**Date**: 2026-08-11  
+**Target Milestone**: M1 (Scraper Refactoring & Legacy Code Removal — Feature F2)  
+**Working Directory**: `j:\Mi unidad\Natacion Colsubsidio\.agents\explorer_m1_2`
 
 ---
 
 ## 1. Executive Summary
 
-This document provides a comprehensive technical investigation of the **Colsubsidio Swimming Availability Self-Healing Workflow** codebase, focusing on request dispatching, session expiration detection, business logic preservation, and the proposed design for the scraper-level self-healing retry mechanism.
+Feature **F2 (Legacy Reservation Code Removal)** mandates the total purge of interactive booking handlers, tiquetera consumption code, and legacy booking URLs from the Colsubsidio Swimming Availability Monitor. The system scope has been focused strictly on read-only availability monitoring with clean Telegram alerts.
 
-Currently, session expiration (`SessionExpiredException`) causes `scraper.py` to immediately abort HTTP requests. Handling is pushed up to `main.py`, which attempts a local Windows browser extraction fallback (`get_cookies.py`). Milestone 2/3 will introduce automated Playwright login renewal via `get_cookies.login_and_get_cookies()` and integrate seamless request-level retries directly inside `scraper.py`.
-
-All 24 existing unit tests in `harness/tests` were verified and pass (`pytest harness/tests`).
+This analysis identifies all legacy components across `code/main.py`, `code/notifier.py`, `code/config.py`, `code/scraper.py`, `.github/workflows/check.yml`, and `harness/tests/`, providing step-by-step instructions and code diff specifications for the Worker implementation.
 
 ---
 
-## 2. Codebase & Component Analysis
+## 2. File-by-File Technical Analysis & Proposed Modifications
 
-### 2.1 `code/scraper.py` (Core Scraping Engine)
-- **Session Setup**: Instantiates `requests.Session()`. Sets domain-specific cookies (`sistema`, `sitio`, `Csrf-Token`) on `www.diversioncolsubsidio.com` and `.diversioncolsubsidio.com`.
-- **Default Headers**:
-  - `User-Agent`: `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ...`
-  - `Accept`: `application/json`
-  - `Content-Type`: `application/json`
-  - `Referer`: `https://www.diversioncolsubsidio.com/deportes-practica-libre-natacion`
-- **Dispatched API Endpoints**:
-  1. `fetch_available_dates(service_id: int) -> list[str]`:
-     - Endpoint: `POST https://www.diversioncolsubsidio.com/v1/centro_entrenamiento/{service_id}/practicalibre/calendario`
-     - Payload: `{"filtro_disponibilidad": {"fecha_inicio": today_str, "fecha_fin": future_str, "inicio_inmediato": False}}`
-     - Returns sorted list of ISO date strings `['YYYY-MM-DD', ...]`.
-  2. `fetch_slots_for_date(service_id: int, date_str: str) -> list[dict]`:
-     - Endpoint: `POST https://www.diversioncolsubsidio.com/v1/centro_entrenamiento/{service_id}/practicalibre/disponibilidad?filtrarSinCupo=0`
-     - Payload: `filtro_disponibilidad` (date range with `-05:00` offset, `categorias_precios`: `["A", "B", "C", "D", "INVITADO"]`), `turno_practica_libre` (`cantidad_usos`: 1, `numero_participantes`: 1, `persona` with user document).
-     - Calculates slot capacity by summing lane capacities across `zonas`.
-  3. `book_slot(service_id: int, date_str: str, time_str: str, tiquetera_id: int) -> tuple[bool, str]`:
-     - Endpoint: `POST https://www.diversioncolsubsidio.com/v1/centro_entrenamiento/{service_id}/practicalibre/reservar`
-     - Payload: `servicio`, `turnos_practica_libre` with selected zone ID and tiquetera ID.
+### 2.1 `code/main.py`
+- **Location**: `code/main.py`, lines 229–280 (in `main()`), lines 38–50 (in `load_cooldown_state()`).
+- **Current State**:
+  - `load_cooldown_state()` sets `"last_processed_update_id": 0` in default state dict.
+  - In `main()`, step 1 polls incoming Telegram messages via `notifier.get_incoming_commands(offset=offset)` and matches regex `^/agendar_(\d+)_(\d{4}_\d{2}_\d{2})_(\d{2}_\d{2})$`.
+  - Upon match, imports `COLSUBSIDIO_TIQUETERA_ID` from `config`, sends progress alert, calls `scraper.book_slot(...)`, and notifies Telegram of success/failure.
+- **Required Modifications**:
+  - Purge lines 229–280 entirely from `main()`. Remove incoming command listener logic.
+  - Update `load_cooldown_state()` default dict to remove `"last_processed_update_id": 0` (or preserve key for backwards compatibility if needed, but remove polling calls).
+- **Proposed Snippet (Before -> After)**:
 
-### 2.2 Session Expiration Identification (`_check_unauthorized`)
-`ColsubsidioScraper._check_unauthorized(response: requests.Response)` evaluates every HTTP response against 3 criteria:
-1. **HTTP 401 Status**: `response.status_code == 401` -> Raises `SessionExpiredException("La API retornó HTTP 401 Unauthorized.")`.
-2. **JSON Unauthorized Status**: If `Content-Type` contains `application/json` and `data.get("status") == "Unauthorized"` -> Raises `SessionExpiredException("Sesión no autorizada en el JSON de respuesta.")`.
-3. **HTML Login Page / Redirect**: If `Content-Type` is not JSON and response text contains `"loguearSitio"` or `"error-no-encontrado"` -> Raises `SessionExpiredException("La sesión expiró (redirección a login o página no encontrada).")`.
-
-Currently, `SessionExpiredException` is caught in `fetch_available_dates`, `fetch_slots_for_date`, and `book_slot` with `except SessionExpiredException: raise`, forcing the outer orchestrator to handle failure.
-
-### 2.3 `code/main.py` (Orchestrator & Business Logic)
-- Manages command execution (`--once`, continuous loop with `time.sleep(interval)`).
-- Executes `check_venues()` across all configured venues (`VENUE_SERVICE_IDS`).
-- Catches `SessionExpiredException` at the top level and attempts local Windows cookie extraction via `get_cookies.extract_colsubsidio_cookies()`.
-- Sends daily Telegram alerts if session renewal fails (throttled to once per 24 hours).
-
-### 2.4 `code/notifier.py` (Telegram Alerts & Interactivity)
-- `TelegramNotifier` handles all Telegram API calls via `https://api.telegram.org/bot<token>/`.
-- Sends consolidated Markdown messages per venue (`notify_venue_slots`).
-- Formats interactive inline commands: `/agendar_<service_id>_<YYYY_MM_DD>_<HH_MM>`.
-- Internal cache `_sent_alerts` de-duplicates identical availability reports within `ALERT_CACHE_DURATION_SECONDS` (1 hour default), bypassed when `force=True`.
-
-### 2.5 `code/config.py` (Environment & Constants)
-- Loads `.env` file from project root.
-- Defines service IDs: `EL CUBO`: `232`, `PLAZA DE LAS AMERICAS`: `428`, `CLUB LA COLINA`: `229`.
-- Defines default check interval (`DEFAULT_CHECK_INTERVAL_SECONDS = 300`).
-
----
-
-## 3. Business Logic Preservation Specification
-
-To ensure no regressions, the self-healing integration must preserve 100% of existing business rules:
-
-| Domain | Business Rule | Implementation Location | Preservation Requirement |
-|---|---|---|---|
-| **Venue Filtering** | Preferred venues: El Cubo (232), Plaza de las Américas (428), Club La Colina (229). | `config.VENUE_SERVICE_IDS` | Retain exact mapping and iteration in `check_venues()`. |
-| **Schedule Rules** | Weekends (Sat/Sun) & Colombian Holidays: Any time slot valid.<br>Weekdays (Mon-Fri non-holiday): Valid only if start hour is 18:00–20:00. | `main.is_within_preferred_schedule()` & `main.is_colombian_holiday()` | Must not alter holiday calendar logic (Meeus/Jones/Butcher algorithm + Ley Emiliani shifts). |
-| **Telegram Notifications** | Markdown formatted venue updates with interactive `/agendar` commands. | `notifier.TelegramNotifier` | Maintain exact message layout and command structure. |
-| **De-duplication Cache** | Avoid duplicate Telegram alerts within 1 hour unless new slots/increased cupos appear or `force_send=True`. | `notifier._sent_alerts` & `main.find_new_slots()` | Preserve slot delta calculation and cache key structure (`VENUE\|fecha:hora:cupos...`). |
-| **State Persistence** | `.cooldown_state` tracks alert cooldown & scheduled report state.<br>`.last_slots.json` tracks last seen slots. | `main.load_cooldown_state()`, `save_cooldown_state()`, `load_last_slots()`, `save_last_slots()` | Keep JSON structure, atomic file read/write, and state keys intact. |
-| **Interactive Booking** | `/agendar_ID_YYYY_MM_DD_HH_MM` command processing via Telegram `getUpdates`. | `main.main()` command parsing + `scraper.book_slot()` | Retain booking workflow, tiquetera ID validation, and status reporting. |
-
----
-
-## 4. Self-Healing Retry Mechanism Design for `scraper.py`
-
-### 4.1 Objective
-Move session recovery responsibility into `ColsubsidioScraper` so that any expired session encountered during scraping or booking triggers an automatic Playwright renewal, updates session state in memory and `.env`, and retries the HTTP request seamlessly without throwing `SessionExpiredException` to caller code.
-
-### 4.2 Module Contract & Interface Integration
-- `get_cookies.login_and_get_cookies(user=None, password=None) -> dict[str, str]`:
-  Automated Playwright login helper (Milestone 2) returning `{"sistema": "...", "Csrf-Token": "..."}`.
-- `get_cookies.update_env_file(cookies: dict[str, str]) -> bool`:
-  Persists fresh cookies into `.env` file on disk.
-
-### 4.3 Scraper In-Memory Renewal Logic (`_renew_session`)
-Within `ColsubsidioScraper`:
+*Before (`code/main.py` lines 228–280)*:
 ```python
-def _renew_session(self) -> bool:
-    """
-    Triggers session renewal via get_cookies module (Playwright or browser extraction),
-    updates in-memory session cookies, headers, and persists fresh tokens to .env.
-    Returns True if renewal succeeded, False otherwise.
-    """
-    logger.info("Session expired or invalid. Triggering self-healing session renewal...")
-    try:
-        from get_cookies import login_and_get_cookies, update_env_file
-        
-        cookies = login_and_get_cookies()
-        if cookies and "sistema" in cookies:
-            sistema_val = cookies["sistema"]
-            csrf_val = cookies.get("Csrf-Token", "")
+    interval = DEFAULT_CHECK_INTERVAL_SECONDS
+    state = load_cooldown_state()
 
-            # Update requests.Session in-memory cookies
-            self.session.cookies.set("sistema", sistema_val, domain="www.diversioncolsubsidio.com")
-            self.session.cookies.set("sistema", sistema_val, domain=".diversioncolsubsidio.com")
-            self.session.cookies.set("sitio", sistema_val, domain="www.diversioncolsubsidio.com")
-            self.session.cookies.set("sitio", sistema_val, domain=".diversioncolsubsidio.com")
-            if csrf_val:
-                self.session.cookies.set("Csrf-Token", csrf_val, domain="www.diversioncolsubsidio.com")
-                self.session.cookies.set("Csrf-Token", csrf_val, domain=".diversioncolsubsidio.com")
+    # 1. Procesar comandos interactivos de Telegram antes de hacer el chequeo
+    offset = state.get("last_processed_update_id", 0) + 1
+    updates = notifier.get_incoming_commands(offset=offset)
 
-            # Persist to .env and environment variables
-            update_env_file(cookies)
-            os.environ["COLSUBSIDIO_SISTEMA_COOKIE"] = sistema_val
-            if csrf_val:
-                os.environ["COLSUBSIDIO_CSRF_TOKEN"] = csrf_val
+    for update in updates:
+        update_id = update.get("update_id")
+        if update_id:
+            state["last_processed_update_id"] = max(state["last_processed_update_id"], update_id)
 
-            logger.info("Session refreshed successfully. In-memory session and .env updated.")
-            return True
-        else:
-            logger.error("Session renewal returned invalid cookie dict.")
-            return False
-    except Exception as e:
-        logger.error("Error during session renewal: %s", e)
-        return False
+        message = update.get("message", {})
+        text = message.get("text", "").strip()
+        chat_id = message.get("chat", {}).get("id")
+
+        # Seguridad: Solo procesar comandos del chat_id autorizado
+        if str(chat_id) != str(notifier.chat_id):
+            continue
+
+        # Match del comando de agendamiento (/agendar_ID_YYYY_MM_DD_HH_MM)
+        match = re.match(r"^/agendar_(\d+)_(\d{4}_\d{2}_\d{2})_(\d{2}_\d{2})$", text)
+        if match:
+            ...
+            success, msg = scraper.book_slot(service_id, date_str, time_str, COLSUBSIDIO_TIQUETERA_ID)
+            ...
+
+    # 2. Calcular hora local de Colombia (Bogotá UTC-5)
 ```
 
-### 4.4 Seamless Request Retry Pattern (`_execute_with_retry`)
-To avoid code duplication across `fetch_available_dates`, `fetch_slots_for_date`, and `book_slot`, a helper method `_execute_with_retry` will wrap HTTP requests:
-
+*After (`code/main.py`)*:
 ```python
-def _execute_with_retry(self, request_func, max_retries: int = 1):
-    """
-    Executes request_func(). If SessionExpiredException is raised, calls _renew_session()
-    and retries request_func() up to max_retries times.
-    """
-    for attempt in range(max_retries + 1):
-        try:
-            return request_func()
-        except SessionExpiredException as e:
-            if attempt < max_retries:
-                logger.warning("Session expired on attempt %d. Attempting auto-healing retry...", attempt + 1)
-                if self._renew_session():
-                    continue
-            raise e
-```
+    interval = DEFAULT_CHECK_INTERVAL_SECONDS
+    state = load_cooldown_state()
 
-### 4.5 Flow Sequence Diagram (Conceptual)
-
+    # 1. Calcular hora local de Colombia (Bogotá UTC-5)
 ```
-Caller (main.py)           Scraper.fetch_slots()          Colsubsidio API          get_cookies.login_and_get_cookies()
-    |                             |                              |                                     |
-    |---- fetch_slots_for_date--->|                              |                                     |
-    |                             |--- POST /disponibilidad ---->|                                     |
-    |                             |<-- HTTP 401 / Login HTML ----|                                     |
-    |                             |                              |                                     |
-    |                             |-- SessionExpiredException -- |                                     |
-    |                             |                              |                                     |
-    |                             |--- Trigger _renew_session() -------------------------------------->|
-    |                             |                                                                    | [Playwright Headless Login]
-    |                             |<-- dict{"sistema": "...", "Csrf-Token": "..."} -------------------|
-    |                             |                                                                    |
-    |                             |-- Update in-memory session & .env                                  |
-    |                             |                              |                                     |
-    |                             |--- POST /disponibilidad ---->| (with fresh cookies)                |
-    |                             |<-- HTTP 200 JSON ------------|                                     |
-    |                             |                              |                                     |
-    |<--- Return slots list ------|                              |                                     |
-```
-
-### 4.6 Verification & Safety Guarantees
-1. **Single Renewal Attempt per Request**: `max_retries = 1` prevents infinite renewal loops if credentials are fundamentally invalid.
-2. **Atomic In-Memory + Disk Sync**: Updating both `self.session.cookies` and `.env` guarantees both immediate request continuation and persistence across script restarts.
-3. **Escalation**: If renewal fails, `SessionExpiredException` propagates to `main.py`, which triggers the 24-hour rate-limited Telegram alert.
 
 ---
 
-## 5. Conclusion & Next Steps
+### 2.2 `code/notifier.py`
+- **Location**: `code/notifier.py`, lines 75–104 (`get_incoming_commands`), lines 184–188 and 191 (`notify_venue_slots`).
+- **Current State**:
+  - `get_incoming_commands()` queries `https://api.telegram.org/bot<token>/getUpdates` to fetch `/agendar` commands.
+  - `notify_venue_slots()` constructs interactive command strings `date_key`, `time_key`, `command = f"/agendar_{service_id}_{date_key}_{time_key}"` and formats lines as:
+    `lines.append(f"• ⏰ `{s['hora']}` 🎟️ `{s['cupos']}` cupos 👉 {command}")`
+  - Includes footer link: `lines.append("🔗 _Reserva en la Tienda de Diversión Colsubsidio_")`.
+- **Required Modifications**:
+  - Remove `get_incoming_commands(self, offset: int = 0)` method entirely.
+  - In `notify_venue_slots()`, remove `service_id` lookup for `/agendar` commands, remove `date_key`/`time_key`/`command` construction, and format slot lines cleanly without interactive commands:
+    `lines.append(f"• ⏰ `{s['hora']}` — 🎟️ `{s['cupos']}` cupos")`
+  - Remove interactive booking links from notification output.
+- **Proposed Snippet (Before -> After)**:
 
-The proposed self-healing design in `scraper.py` cleanly separates session renewal, retry execution, and business logic. Milestone 2 will implement `login_and_get_cookies` using Playwright Chromium in `code/get_cookies.py`, and Milestone 3 will integrate this self-healing retry mechanism into `code/scraper.py`.
+*Before (`code/notifier.py` lines 183–191)*:
+```python
+            lines.append(date_header)
+            for s in date_slots:
+                # Generar link interactivo de comando para Telegram (ej. /agendar_229_2026_06_12_18_00)
+                date_key = date_str.replace("-", "_")
+                time_key = s["hora"].replace(":", "_")
+                command = f"/agendar_{service_id}_{date_key}_{time_key}"
+                lines.append(f"• ⏰ `{s['hora']}` 🎟️ `{s['cupos']}` cupos 👉 {command}")
+            lines.append("")  # Espacio entre fechas
+
+        lines.append("🔗 _Reserva en la Tienda de Diversión Colsubsidio_")
+```
+
+*After (`code/notifier.py`)*:
+```python
+            lines.append(date_header)
+            for s in date_slots:
+                lines.append(f"• ⏰ `{s['hora']}` — 🎟️ `{s['cupos']}` cupos")
+            lines.append("")  # Espacio entre fechas
+```
+
+---
+
+### 2.3 `code/config.py`
+- **Location**: `code/config.py`, lines 31–33.
+- **Current State**:
+  ```python
+  # ID de la tiquetera/plan para reservas automatizadas/interactivas
+  _tiq_val = os.environ.get("COLSUBSIDIO_TIQUETERA_ID") or "6370683"
+  COLSUBSIDIO_TIQUETERA_ID: int | None = int(_tiq_val) if _tiq_val.isdigit() else None
+  ```
+- **Required Modifications**:
+  - Remove `_tiq_val` and `COLSUBSIDIO_TIQUETERA_ID` definitions completely.
+
+---
+
+### 2.4 `code/scraper.py`
+- **Location**: `code/scraper.py`, lines 245–345 (`book_slot`).
+- **Current State**:
+  - `book_slot(self, service_id: int, date_str: str, time_str: str, tiquetera_id: int)` sends POST requests to `/v1/centro_entrenamiento/{service_id}/practicalibre/reservar` to execute slot bookings.
+- **Required Modifications**:
+  - Purge `book_slot()` method completely.
+
+---
+
+### 2.5 `.github/workflows/check.yml`
+- **Location**: `.github/workflows/check.yml`, line 67.
+- **Current State**:
+  ```yaml
+        COLSUBSIDIO_USER: ${{ secrets.COLSUBSIDIO_USER }}
+        COLSUBSIDIO_PASS: ${{ secrets.COLSUBSIDIO_PASS }}
+        COLSUBSIDIO_SISTEMA_COOKIE: ${{ secrets.COLSUBSIDIO_SISTEMA_COOKIE }}
+        COLSUBSIDIO_CSRF_TOKEN: ${{ secrets.COLSUBSIDIO_CSRF_TOKEN }}
+        COLSUBSIDIO_DOCUMENT_TYPE: ${{ secrets.COLSUBSIDIO_DOCUMENT_TYPE }}
+        COLSUBSIDIO_DOCUMENT_NUMBER: ${{ secrets.COLSUBSIDIO_DOCUMENT_NUMBER }}
+        COLSUBSIDIO_TIQUETERA_ID: ${{ secrets.COLSUBSIDIO_TIQUETERA_ID }}
+  ```
+- **Required Modifications**:
+  - Remove `COLSUBSIDIO_TIQUETERA_ID: ${{ secrets.COLSUBSIDIO_TIQUETERA_ID }}` secret mapping.
+
+---
+
+### 2.6 `harness/tests/` (Test Suite Alignment)
+- **Files Affected**:
+  - `harness/tests/test_notifier.py`: Remove `test_get_incoming_commands_success` (lines 113–142).
+  - `harness/tests/test_scraper.py`: Remove `test_book_slot_success` (lines 127–162) and `test_book_slot_auto_retry_success` (lines 248–283).
+  - `harness/tests/test_m3_adversarial_challenger.py`: Remove `test_persistent_401_in_book_slot_raises_exception` (lines 70–105).
+  - `harness/tests/test_m3_challenger_session.py`: Remove section 3 `test_book_slot_*` tests (lines 190–399).
+- **Rationale**: Purging legacy functions (`book_slot`, `get_incoming_commands`) requires updating unit tests so pytest continues to run 100% clean without failing on missing attributes.
+
+---
+
+## 3. Impact Assessment & Risk Mitigation
+
+| Area | Impact | Mitigation |
+|---|---|---|
+| CLI Runtime (`main.py`) | High reduction in code complexity; removes network call to Telegram `getUpdates` on every loop iteration. | Verify `--once` execution runs cleanly without `last_processed_update_id`. |
+| Notifications (`notifier.py`) | Cleaner Markdown output; prevents user confusion with non-functional `/agendar` commands. | Run `pytest harness/tests/test_notifier.py` to confirm clean formatting. |
+| Configuration (`config.py`) | Eliminates unused environment variable. | Ensure no other module imports `COLSUBSIDIO_TIQUETERA_ID`. |
+| CI/CD (`check.yml`) | Simplifies secret requirements. | Validate YAML syntax and secret list against `PROJECT.md` M1 specifications. |
+
+---
+
+## 4. Step-by-Step Worker Implementation Instructions
+
+1. **Modify `code/config.py`**:
+   - Delete `COLSUBSIDIO_TIQUETERA_ID` lines 31–33.
+2. **Modify `code/scraper.py`**:
+   - Delete `book_slot` method (lines 245–345).
+3. **Modify `code/notifier.py`**:
+   - Delete `get_incoming_commands` method (lines 75–104).
+   - In `notify_venue_slots`, remove `/agendar` command string building and update slot formatting to `• ⏰ {s['hora']} — 🎟️ {s['cupos']} cupos`. Remove booking URL footer line.
+4. **Modify `code/main.py`**:
+   - In `main()`, remove block 1 (command processing loop lines 229–280).
+   - In `load_cooldown_state()`, remove `last_processed_update_id` default key if desired, or keep as optional fallback.
+5. **Modify `.github/workflows/check.yml`**:
+   - Remove `COLSUBSIDIO_TIQUETERA_ID: ${{ secrets.COLSUBSIDIO_TIQUETERA_ID }}` under `Ejecutar Revisor` step env.
+6. **Update Test Suite (`harness/tests/`)**:
+   - Remove obsolete unit and challenger tests for `book_slot` and `get_incoming_commands`.
+7. **Verification**:
+   - Run `py -m pytest harness/tests` to verify test suite passes 100%.

@@ -53,14 +53,6 @@ def test_missing_password_only_raises_value_error(monkeypatch: pytest.MonkeyPatc
             login_and_get_cookies()
 
 
-def test_tiquetera_id_invalid_string_defaults_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Verifica que una tiquetera ID no numérica se evalúe como None en config."""
-    monkeypatch.setenv("COLSUBSIDIO_TIQUETERA_ID", "invalid_id_abc")
-    
-    # Recargar o reler la lógica de config para COLSUBSIDIO_TIQUETERA_ID
-    _tiq_val = os.environ.get("COLSUBSIDIO_TIQUETERA_ID") or "6370683"
-    tiquetera_id = int(_tiq_val) if _tiq_val.isdigit() else None
-    assert tiquetera_id is None
 
 
 # ============================================================================

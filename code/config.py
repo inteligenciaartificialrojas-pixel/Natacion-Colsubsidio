@@ -28,10 +28,6 @@ COLSUBSIDIO_CSRF_TOKEN: str | None = os.environ.get("COLSUBSIDIO_CSRF_TOKEN")
 COLSUBSIDIO_DOCUMENT_TYPE: str = os.environ.get("COLSUBSIDIO_DOCUMENT_TYPE", "CC")
 COLSUBSIDIO_DOCUMENT_NUMBER: str = os.environ.get("COLSUBSIDIO_DOCUMENT_NUMBER", "1002559691")
 
-# ID de la tiquetera/plan para reservas automatizadas/interactivas
-_tiq_val = os.environ.get("COLSUBSIDIO_TIQUETERA_ID") or "6370683"
-COLSUBSIDIO_TIQUETERA_ID: int | None = int(_tiq_val) if _tiq_val.isdigit() else None
-
 # Configuración de búsqueda
 # Sedes de interés normalizadas en mayúsculas
 PREFERRED_VENUES: list[str] = [
@@ -48,8 +44,8 @@ VENUE_SERVICE_IDS: dict[str, int] = {
 }
 
 # Reglas de horario para días entre semana (L-V)
-WEEKDAY_START_HOUR: int = 18  # 6:00 PM
-WEEKDAY_END_HOUR: int = 20    # 8:00 PM
+WEEKDAY_MORNING_END_HOUR: int = 7     # Turnos < 07:00 (07:00 no permitido)
+WEEKDAY_EVENING_START_HOUR: int = 17  # Turnos >= 17:00 (17:00 permitido)
 
 # Intervalo por defecto de escaneo (en segundos)
 DEFAULT_CHECK_INTERVAL_SECONDS: int = 300  # 5 minutos

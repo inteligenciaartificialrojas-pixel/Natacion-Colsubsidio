@@ -1,25 +1,20 @@
-# Progress Log — Colsubsidio Swimming Availability Self-Healing Workflow
-
 ## Current Status
-Last visited: 2026-08-09T14:16:00-05:00
+Last visited: 2026-08-12T04:55:45Z
 
 ## Iteration Status
-Current iteration: 1 / 32 (M5 Complete)
+Current iteration: 1 / 32 (Gen 2 - Milestone 2)
 
 ## Checklist
-- [x] Read `ORIGINAL_REQUEST.md` & `handoff.md`
-- [x] Initialize Gen 2 `BRIEFING.md` & `progress.md`
-- [x] M1: Exploration & Architecture Analysis (Gen 1)
-- [x] M2: Playwright Automated Login & Session Renewal Module (Gen 1)
-- [x] M3: Scraper Self-Healing Integration (Gen 1)
-- [x] M4: CI/CD & Local Runner Compatibility (Gen 2 - Verified CLEAN & APPROVED)
-- [x] M5: E2E Testing, Adversarial Hardening & Final Audit (Gen 2 - Verified CLEAN & APPROVED)
-  - [x] Verified `python code/main.py --once` with expired cookies
-  - [x] Verified 84 passing tests in `harness/tests` test harness
-  - [x] Final Forensic Integrity Audit (Verdict: CLEAN)
-  - [x] Send completion report to parent (`217831ec-9d74-4ae3-a26c-67b55bde0ea5`)
-
-## Retrospective & Notes
-- Generation 2 successfully completed Milestone 4 (CI/CD & Local Runner) and Milestone 5 (E2E Verification, Hardening & Final Audit).
-- Forensic Auditor rendered CLEAN verdict on both M4 and M5.
-- All 84 tests pass cleanly. Zero integrity violations.
+- [x] Initialized DISPATCH.md and BRIEFING.md
+- [x] Initialized progress.md
+- [x] Start heartbeat cron (task-15)
+- [x] Spawn 3 Explorers for initial Codebase Survey & Feature Inventory mapping
+- [x] Synthesize Explorer reports into PROJECT.md
+- [x] Spawn E2E Testing track (test_writer_e2e_1 complete, TEST_READY.md published)
+- [x] Decompose into milestones
+- [x] Milestone 1: Scraper Refactoring & Legacy Code Removal (DONE - Forensic Audit CLEAN, Reviewers APPROVE)
+- [x] Execute Succession Protocol (Gen 2 Orchestrator spawned)
+- [ ] Milestone 2: Strict Schedule Filter Engine & Clean Telegram Notifications (IN_PROGRESS)
+- [ ] Milestone 3: GitHub Actions 20-min Cron & README Cookie Renewal Guide (PLANNED)
+- [ ] Milestone 4: Final E2E Test Pass & Tier 5 Adversarial Coverage Hardening (PLANNED)
+- [ ] Deliver final report to Sentinel / parent (PLANNED)

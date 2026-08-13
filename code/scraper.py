@@ -53,16 +53,29 @@ class ColsubsidioScraper:
             self.session.cookies.set("Csrf-Token", csrf_val, domain=".diversioncolsubsidio.com")
             self.session.headers["Csrf-Token"] = csrf_val
 
-    def _renew_session(self) -> dict[str, str]:
+    def _renew_session(self, reason: str = "") -> dict[str, str]:
         """Intenta renovar la sesión mediante Playwright o extracción local de cookies,
         actualizando la sesión en memoria y guardando las nuevas cookies en el archivo .env.
         """
         logger.info("Iniciando renovación de sesión de Colsubsidio...")
         from get_cookies import extract_colsubsidio_cookies, update_env_file
 
-        new_cookies = extract_colsubsidio_cookies()
+        try:
+            new_cookies = extract_colsubsidio_cookies()
+        except requests.RequestException:
+            raise
+        except Exception as exc:
+            logger.error("Error inesperado durante la extracción de cookies: %s", exc)
+            msg = f"Falla al extraer nuevas cookies: {exc}"
+            if reason:
+                msg += f" (causa original: {reason})"
+            raise SessionExpiredException(msg) from exc
+
         if not new_cookies or "sistema" not in new_cookies:
-            raise SessionExpiredException("No se pudieron obtener nuevas cookies de sesión durante la renovación.")
+            msg = "No se pudieron obtener nuevas cookies de sesión durante la renovación."
+            if reason:
+                msg += f" (causa original: {reason})"
+            raise SessionExpiredException(msg)
 
         self.update_session_credentials(new_cookies)
         update_env_file(new_cookies)
@@ -81,7 +94,7 @@ class ColsubsidioScraper:
                 if attempts < max_retries:
                     attempts += 1
                     logger.warning("Sesión expirada detectada (intento %d/%d). Renovando sesión...", attempts, max_retries)
-                    self._renew_session()
+                    self._renew_session(reason=str(exc))
                 else:
                     logger.error("La sesión expiró y se superó el límite de reintentos (%d).", max_retries)
                     raise
@@ -96,8 +109,17 @@ class ColsubsidioScraper:
         try:
             if "application/json" in response.headers.get("Content-Type", ""):
                 data = response.json()
-                if isinstance(data, dict) and data.get("status") == "Unauthorized":
-                    raise SessionExpiredException("Sesión no autorizada en el JSON de respuesta.")
+                if isinstance(data, dict):
+                    status_val = str(data.get("status", "")).lower()
+                    code_val = str(data.get("code", "")).lower()
+                    error_val = str(data.get("error", "")).lower()
+                    msg_val = str(data.get("message", "")).lower()
+
+                    if (status_val in ["unauthorized", "401"] or
+                        code_val in ["unauthorized", "401"] or
+                        error_val in ["unauthorized", "401"] or
+                        "unauthorized" in msg_val or "session expired" in msg_val):
+                        raise SessionExpiredException("Sesión no autorizada en el JSON de respuesta.")
         except (ValueError, TypeError):
             pass
 
@@ -138,21 +160,27 @@ class ColsubsidioScraper:
                 return []
 
             data = response.json()
-            fechas_dict = data.get("fechas", {})
-            available_dates = [
-                fecha_str for fecha_str, info in fechas_dict.items()
-                if info.get("disponibilidad") is True
-            ]
+            if not isinstance(data, dict):
+                logger.warning("Respuesta inesperada (no es dict) en calendario: %s", type(data))
+                return []
+
+            fechas_dict = data.get("fechas")
+            if not isinstance(fechas_dict, dict):
+                logger.warning("'fechas' no es dict o es None en calendario: %s", type(fechas_dict))
+                return []
+
+            available_dates = []
+            for fecha_str, info in fechas_dict.items():
+                if isinstance(info, dict) and info.get("disponibilidad") is True:
+                    available_dates.append(fecha_str)
+
             logger.info("Fechas disponibles encontradas: %s", available_dates)
             return sorted(available_dates)
 
         except SessionExpiredException:
             raise
-        except requests.RequestException as e:
-            logger.error("Error de conexión al obtener calendario de Colsubsidio: %s", e)
-            return []
-        except ValueError as e:
-            logger.error("Error al parsear el JSON del calendario: %s", e)
+        except (requests.RequestException, ValueError, TypeError, AttributeError, KeyError) as e:
+            logger.error("Error al procesar respuesta del calendario: %s", e)
             return []
 
     def fetch_slots_for_date(self, service_id: int, date_str: str) -> list[dict]:
@@ -205,14 +233,28 @@ class ColsubsidioScraper:
                 return []
 
             data = response.json()
-            horarios = data.get("horarios", [])
-            slots = []
+            if not isinstance(data, dict):
+                logger.warning("Respuesta inesperada (no es dict) en horarios para %s: %s", date_str, type(data))
+                return []
 
+            horarios = data.get("horarios")
+            if not isinstance(horarios, list):
+                logger.warning("'horarios' no es lista o es None para %s: %s", date_str, type(horarios))
+                return []
+
+            slots = []
             for h in horarios:
-                hora_inicio = h.get("horario", {}).get("hora_inicio")
-                if not hora_inicio:
+                if not isinstance(h, dict):
                     continue
-                
+
+                horario_obj = h.get("horario")
+                if not isinstance(horario_obj, dict):
+                    continue
+
+                hora_inicio = horario_obj.get("hora_inicio")
+                if not isinstance(hora_inicio, str) or not hora_inicio:
+                    continue
+
                 # Normalizar formato de hora (HH:MM:SS -> HH:MM)
                 parts = hora_inicio.split(":")
                 hora_formatted = f"{parts[0]}:{parts[1]}" if len(parts) >= 2 else hora_inicio
@@ -220,126 +262,39 @@ class ColsubsidioScraper:
                 # Obtener cupos directamente del objeto padre o calcularlos sumando zonas
                 cupos = h.get("cupos")
                 if cupos is None:
-                    cupos = sum(z.get("cupos", z.get("capacidad_disponible", 0)) for z in h.get("zonas", []))
+                    zonas = h.get("zonas")
+                    if isinstance(zonas, list):
+                        cupos = 0
+                        for z in zonas:
+                            if isinstance(z, dict):
+                                cap = z.get("cupos") if z.get("cupos") is not None else z.get("capacidad_disponible", 0)
+                                try:
+                                    cupos += int(cap)
+                                except (ValueError, TypeError):
+                                    pass
+                    else:
+                        cupos = 0
 
-                if cupos > 0:
+                try:
+                    cupos_int = int(cupos) if cupos is not None else 0
+                except (ValueError, TypeError):
+                    cupos_int = 0
+
+                if cupos_int > 0:
                     slots.append({
                         "fecha": date_str,
                         "hora": hora_formatted,
-                        "cupos": cupos,
-                        "raw_horario": h.get("horario", {}),
-                        "zonas": h.get("zonas", [])
+                        "cupos": cupos_int,
+                        "raw_horario": horario_obj,
+                        "zonas": h.get("zonas") if isinstance(h.get("zonas"), list) else []
                     })
 
             return slots
 
         except SessionExpiredException:
             raise
-        except requests.RequestException as e:
-            logger.error("Error de conexión al obtener horarios para %s: %s", date_str, e)
-            return []
-        except ValueError as e:
-            logger.error("Error al parsear el JSON de horarios para %s: %s", date_str, e)
+        except (requests.RequestException, ValueError, TypeError, AttributeError, KeyError) as e:
+            logger.error("Error al procesar respuesta de horarios para %s: %s", date_str, e)
             return []
 
-    def book_slot(self, service_id: int, date_str: str, time_str: str, tiquetera_id: int) -> tuple[bool, str]:
-        """
-        Intenta reservar un slot de natación específico utilizando la tiquetera especificada.
-        Retorna (True, mensaje_exito) o (False, mensaje_error).
-        """
-        # 1. Obtener la disponibilidad de la fecha para extraer el slot con su raw_horario y zonas
-        slots = self.fetch_slots_for_date(service_id, date_str)
-        target_slot = None
-        for s in slots:
-            if s["hora"] == time_str:
-                target_slot = s
-                break
-        
-        if not target_slot:
-            return False, f"El horario {time_str} ya no está disponible en la fecha {date_str}."
-        
-        # 2. Seleccionar la primera zona/carril disponible
-        selected_zone_id = None
-        for z in target_slot.get("zonas", []):
-            z_cupos = z.get("cupos", z.get("capacidad_disponible", 0))
-            if z_cupos > 0:
-                selected_zone_id = z.get("id")
-                break
-        
-        if not selected_zone_id:
-            return False, "No hay carriles (zonas) con cupo disponible para este horario."
-
-        # Importaciones diferidas
-        from config import COLSUBSIDIO_DOCUMENT_TYPE, COLSUBSIDIO_DOCUMENT_NUMBER
-
-        persona = {
-            "tipo_documento": COLSUBSIDIO_DOCUMENT_TYPE or "CC",
-            "documento": COLSUBSIDIO_DOCUMENT_NUMBER,
-            "datos": {
-                "zona": 1
-            }
-        }
-
-        materiales = [
-            {
-                "persona": persona,
-                "informacion_compra_material": []
-            }
-        ]
-
-        payload = {
-            "servicio": {
-                "id": service_id,
-                "tipo": 2
-            },
-            "turnos_practica_libre": [
-                {
-                    "horario": {
-                        "fecha": target_slot["raw_horario"].get("fecha"),
-                        "hora_inicio": target_slot["raw_horario"].get("hora_inicio"),
-                        "hora_fin": target_slot["raw_horario"].get("hora_fin")
-                    },
-                    "tiquetera": tiquetera_id,
-                    "cantidad_usos": 1,
-                    "numero_participantes": 1,
-                    "persona": persona,
-                    "materiales": materiales,
-                    "zona": [
-                        {
-                            "id": selected_zone_id
-                        }
-                    ]
-                }
-            ]
-        }
-
-        url = f"https://www.diversioncolsubsidio.com/v1/centro_entrenamiento/{service_id}/practicalibre/reservar"
-
-        def _make_request():
-            logger.info("Realizando petición de reserva al servicio %s...", service_id)
-            response = self.session.post(url, json=payload, timeout=20)
-            self._check_unauthorized(response)
-            return response
-
-        try:
-            response = self._execute_with_retry(_make_request)
-
-            if response.status_code in [200, 201]:
-                res_data = response.json()
-                if "turnos_practica_libre" in res_data:
-                    return True, "Reserva realizada con éxito en la plataforma."
-                else:
-                    return False, f"La respuesta de la plataforma no confirmó la reserva: {response.text}"
-            else:
-                try:
-                    res_data = response.json()
-                    err = res_data.get("mensaje") or res_data.get("error", {}).get("message") or response.text
-                except Exception:
-                    err = response.text
-                return False, f"Error del servidor (HTTP {response.status_code}): {err}"
-        except SessionExpiredException:
-            raise
-        except Exception as e:
-            logger.error("Error al procesar la reserva: %s", e)
-            return False, f"Fallo en la comunicación con Colsubsidio: {e}"
 

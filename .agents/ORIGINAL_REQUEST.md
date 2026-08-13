@@ -32,3 +32,45 @@ Preserve all existing scraper features: filtering preferred venue schedules (El 
 ### Integrity & Quality
 - [ ] Automated tests or verification scripts confirm that expired cookie scenarios automatically recover and fetch availability.
 - [ ] No regression in Telegram notifications or slot filtering logic.
+
+## 2026-08-12T04:36:38Z
+
+Monitor automatizado de disponibilidad de natación de Colsubsidio desplegado en GitHub Actions con Cronjob (cada 20 minutos), que consulta exclusivamente los cupos libres en la ventana horaria de preferencia del usuario y notifica a Telegram de forma limpia y sin duplicados.
+
+Working directory: j:\Mi unidad\Natacion Colsubsidio
+Integrity mode: demo
+
+## Technical Findings (Page & API Analysis)
+- La página web (https://www.diversioncolsubsidio.com/deportes-practica-libre-natacion#/wizard?producto=80) utiliza AngularJS y llama a las APIs de backend:
+  - `/v1/centro_entrenamiento/{id}/practicalibre/calendario`
+  - `/v1/centro_entrenamiento/{id}/practicalibre/disponibilidad?filtrarSinCupo=0`
+- **Autenticación requerida por la API:** Colsubsidio exige cookies de sesión válidas (`sistema` y `Csrf-Token`) para responder a las consultas de disponibilidad (las peticiones anónimas retornan `HTTP 401 Unauthorized`).
+- **Alcance ajustado:** No se realizará ninguna acción de reserva ni consumo de tiquetera. Únicamente se mantendrán las credenciales/cookies de sesión necesarias en GitHub Secrets (`COLSUBSIDIO_SISTEMA_COOKIE`, `COLSUBSIDIO_CSRF_TOKEN`) para habilitar la lectura de horarios y cupos.
+
+## Requirements
+
+### R1. Availability API Scraper & Cookie Session Handling
+Reconstruir el scraper para consultar únicamente la disponibilidad de fechas y cupos por sede mediante los endpoints REST (`/v1/centro_entrenamiento/.../practicalibre/calendario` y `disponibilidad`), manejando limpiamente las cookies de sesión para la consulta de datos sin ejecutar acciones de reserva.
+
+### R2. Strict Schedule Filter Engine
+Filtrar la oferta de cupos libres para notificar exclusivamente aquellos que coincidan con la ventana deseada por el usuario:
+- **Lunes a Viernes:** turnos antes de las 7:00 AM o después de las 5:00 PM (17:00).
+- **Sábados y Domingos:** cualquier hora del día.
+
+### R3. Clean Telegram Notifications & Deduplication
+Enviar mensajes limpios, simples, cortos y estructurados a Telegram (Fecha, Hora, Sede/Piscina y Cupos Libres). Mantener estado persistente entre ejecuciones para evitar enviar notificaciones duplicadas de cupos ya reportados.
+
+### R4. GitHub Actions CI/CD Cron Automation
+Configurar la automatización en `.github/workflows/check.yml` para ejecutar la verificación cada 20 minutos vía Cronjob, utilizando GitHub Secrets para almacenar `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID`, `COLSUBSIDIO_SISTEMA_COOKIE` y `COLSUBSIDIO_CSRF_TOKEN`.
+
+## Acceptance Criteria
+
+### Core Functionality
+- [ ] Código simplificado: removida toda lógica de reservación de turnos y manejo de tiqueteras.
+- [ ] Consulta eficiente a los endpoints de disponibilidad usando la cookie de sesión configurada.
+- [ ] Filtro estricto de horarios aplicado correctamente (L-V < 7am ó > 5pm; S-D 24h).
+- [ ] Mensaje de Telegram claro y conciso, previniendo alertas repetidas de los mismos horarios.
+
+### Automation & Deployment
+- [ ] Workflow `.github/workflows/check.yml` actualizado y validado para ejecuciones periódicas de 20 min y despacho manual (`workflow_dispatch`).
+- [ ] Guía paso a paso en el README sobre cómo obtener y renovar fácilmente las cookies desde las herramientas de desarrollador del navegador cuando expiren.

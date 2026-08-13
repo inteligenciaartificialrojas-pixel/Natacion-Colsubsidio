@@ -1,46 +1,43 @@
-# Final Orchestrator Handoff Report — Colsubsidio Swimming Availability Self-Healing Project
+# Handoff Report — Project Orchestrator (Gen 1)
 
-## 1. Milestone State
+## Observation
+- **Completed Work**:
+  - Codebase survey and specification mining (3 survey subagents completed).
+  - Master Scope Document `PROJECT.md` created: 7 features (F1-F7), 5 milestones (M-TEST, M1-M4).
+  - E2E Test Suite (Tiers 1-4) implemented by `test_writer_e2e_1` (`TEST_READY.md` published at project root with 27 tests).
+  - Milestone 1 (Scraper Refactoring & Legacy Reservation Code Removal):
+    - Refactored `ColsubsidioScraper` in `code/scraper.py` for `/calendario` and `/disponibilidad` REST availability endpoints with `COLSUBSIDIO_SISTEMA_COOKIE` and `COLSUBSIDIO_CSRF_TOKEN` headers, plus 401 `SessionExpiredException` handling.
+    - Completely purged `book_slot()`, `COLSUBSIDIO_TIQUETERA_ID`, `/agendar` command parser, and legacy booking URLs from `code/scraper.py`, `code/config.py`, `code/main.py`, `code/notifier.py`, `.github/workflows/check.yml`.
+    - Purged legacy reservation test cases from `harness/tests/test_scraper.py`, `harness/tests/test_notifier.py`, `harness/tests/test_e2e_requirements.py`, `harness/tests/test_m2_adversarial.py`.
+    - Verified by Forensic Auditor (`auditor_m1_it2_1` verdict: **CLEAN**), Reviewers (`reviewer_m1_it2_1` & `reviewer_m1_it2_2` verdicts: **APPROVE**), and Challenger 1 (**APPROVE**).
+- **Milestone State**:
+  - `M-TEST`: DONE (Requirement-driven E2E test suite built)
+  - `M1`: DONE / PASSED (Scraper Refactored & Legacy Code Purged; Forensic Audit CLEAN)
+  - `M2`: IN_PROGRESS / NEXT (Strict Schedule Filter Engine & Clean Telegram Notifications - F3, F4)
+  - `M3`: PLANNED (GitHub Actions 20-min Cron & README DevTools Cookie Guide - F5, F6)
+  - `M4`: PLANNED (Final E2E Test Suite Pass & Tier 5 Adversarial Coverage Hardening - F7)
+- **Active Subagents**: None (all 22 spawned subagents are complete).
 
-| Milestone | Name | Status | Verification Verdict |
-|-----------|------|--------|---------------------|
-| M1 | Exploration & Architecture Analysis | DONE | Verified |
-| M2 | Playwright Automated Login & Session Renewal Module | DONE | CLEAN (Forensic Auditor) |
-| M3 | Scraper Self-Healing Integration | DONE | CLEAN (Forensic Auditor) |
-| M4 | CI/CD & Local Runner Compatibility | DONE | CLEAN (Forensic Auditor) |
-| M5 | E2E Verification, Hardening & Final Audit | DONE | CLEAN (Forensic Auditor) |
+## Logic Chain & Rationale
+- Milestone 1 Iteration 1 failed due to unpurged legacy tests in `test_e2e_requirements.py`.
+- Milestone 1 Iteration 2 successfully purged those legacy test cases and added defensive type checking in `code/scraper.py`.
+- Forensic Auditor confirmed CLEAN integrity; Reviewers approved.
+- Challenger 2 flagged 2 minor items for Milestone 2 worker:
+  1. Add `import time` to top of `code/get_cookies.py` (needed by `update_env_file` retry loop).
+  2. Update em-dash formatting assertion in `test_tier3_clean_message_formatting` in `test_e2e_requirements.py`.
 
----
+## Remaining Work for Successor (Gen 2)
+1. Execute **Milestone 2**: Strict Schedule Filter Engine & Clean Telegram Notifications (F3, F4):
+   - Dispatch 3 Explorers for Milestone 2 to plan updates to `is_within_preferred_schedule()` in `code/main.py` (Mon-Fri < 07:00 or >= 17:00, Sat-Sun & Colombian Holidays 24h), Telegram notification clean-up in `code/notifier.py`, missing `import time` in `code/get_cookies.py`, and test assertions.
+   - Dispatch Worker, then 2 Reviewers, 2 Challengers, and Forensic Auditor.
+2. Execute **Milestone 3**: GitHub Actions 20-min Cron & README Cookie Renewal Guide (F5, F6).
+3. Execute **Milestone 4**: Final E2E Test Suite Pass & Tier 5 Adversarial Coverage Hardening (F7).
+4. Deliver final completion report to Sentinel / parent (ID: `5e418242-b7dd-472f-89f3-5648d7095f08`).
 
-## 2. Key Accomplishments
-
-1. **Automated Playwright Session Login & Renewal (R1)**:
-   - Implemented `login_and_get_cookies()` in `code/get_cookies.py` using Playwright headless Chromium.
-   - Credentials configured via `COLSUBSIDIO_USER` and `COLSUBSIDIO_PASS` in `.env`.
-   - Windows local browser cookie DPAPI extraction retained as fallback.
-   - Atomic `.env` file updating (`update_env_file()`) with tempfile replacement, quote preservation, UTF-8 encoding, and non-destructive partial updates.
-
-2. **Scraper Self-Healing & Retry Logic (R1 & R3)**:
-   - Integrated `SessionExpiredException` detection in `ColsubsidioScraper` (`code/scraper.py`) for HTTP 401, JSON unauthorized payloads, and HTML login redirects.
-   - `_execute_with_retry` automatically triggers session renewal on expiration, updates session headers/cookies in memory and on disk, and retries request.
-   - Main CLI loop (`code/main.py --once`) seamlessly recovers from expired cookie states without exit code 1 errors.
-
-3. **CI/CD & Runner Compatibility (R2)**:
-   - Updated `code/requirements.txt` with `playwright>=1.40.0`.
-   - Updated `.env.example` with `COLSUBSIDIO_USER` and `COLSUBSIDIO_PASS` placeholders.
-   - Hardened `.github/workflows/check.yml` with valid GitHub Action tags (`checkout@v4`, `setup-python@v5`, `cache@v4`), `python -m playwright install --with-deps chromium`, browser caching, and secret bindings.
-   - Updated local batch scripts (`actualizar_cookies.bat` and `ejecutar_revisor_local.bat`) with `cd /d "%~dp0"`, dynamic python launcher resolution, no hardcoded user paths, and error code checking.
-
-4. **Preserved Business Logic & Test Suite (R3)**:
-   - Preserved all venue schedule rules (El Cubo 232, Plaza de las Américas 428, Club La Colina 229; 18:00-20:00 non-holiday weekdays; unrestricted weekends/holidays via Meeus Easter algorithm + Ley Emiliani).
-   - Preserved Telegram notifications, `.cooldown_state`, `.last_slots.json`, and interactive `/agendar` booking command handlers.
-   - Comprehensive test harness expanded to **84 passing tests** across 10 modules in `harness/tests`.
-
-5. **Forensic Integrity Verification**:
-   - Every single milestone passed independent Forensic Integrity Auditing by `teamwork_preview_auditor`.
-   - 0 hardcoded test results, 0 facade implementations, 0 shortcuts. Verdict: **CLEAN**.
-
----
-
-## 3. Parent Notification
-Sending completion report to Parent / Sentinel (`217831ec-9d74-4ae3-a26c-67b55bde0ea5`).
+## Key Artifacts
+- `j:\Mi unidad\Natacion Colsubsidio\.agents\ORIGINAL_REQUEST.md` — User specification
+- `j:\Mi unidad\Natacion Colsubsidio\.agents\orchestrator\PROJECT.md` — Master project scope & feature index
+- `j:\Mi unidad\Natacion Colsubsidio\.agents\orchestrator\GATE_STATUS.md` — Milestone gate status tracking
+- `j:\Mi unidad\Natacion Colsubsidio\.agents\orchestrator\progress.md` — Progress checklist & heartbeat
+- `j:\Mi unidad\Natacion Colsubsidio\TEST_READY.md` — E2E test suite signal
+- `j:\Mi unidad\Natacion Colsubsidio\.agents\auditor_m1_it2_1\handoff.md` — Forensic audit clean verdict

@@ -1,128 +1,80 @@
-# Technical Analysis: CI/CD, Playwright Dependencies & Local Runner Setup
+# Implementation Instructions for Worker: Milestone 1 Test Suite & Unit Test Clean-up
 
-## 1. Executive Summary
+## Executive Summary
+Milestone 1 focuses on two primary features:
+1. **F1: Cookie Session Scraper Refactoring**: Query availability endpoints (`/v1/centro_entrenamiento/{id}/practicalibre/calendario` and `disponibilidad`) using `COLSUBSIDIO_SISTEMA_COOKIE` and `COLSUBSIDIO_CSRF_TOKEN` headers, with HTTP 401 session expiration handling (`SessionExpiredException`) and Playwright-based automatic cookie renewal.
+2. **F2: Legacy Reservation Code Removal**: Complete removal of all booking, reservation, and tiquetera logic (`book_slot()`, Telegram `/agendar` command parser, `COLSUBSIDIO_TIQUETERA_ID`, and associated unit test cases).
 
-This report presents a comprehensive technical analysis of the CI/CD workflow (`.github/workflows/check.yml`), Python dependencies (`code/requirements.txt`), environment configurations (`.env.example`), local batch scripts (`actualizar_cookies.bat`, `ejecutar_revisor_local.bat`), and test harness (`harness/`) for the Colsubsidio Swimming Availability Self-Healing project.
-
-The current implementation relies on a legacy Windows DPAPI script (`code/get_cookies.py`) that extracts session cookies from local Chrome/Edge browser SQLite databases. This approach fails completely in headless CI/CD environments (Linux GitHub Actions runners) when session cookies expire, causing scheduled workflow runs to fail with exit code 1.
-
-Migrating session renewal to Playwright headless Chromium enables automated, cross-platform login and cookie retrieval across both local Windows runners and GitHub Actions.
-
----
-
-## 2. Current Architecture & Bottlenecks
-
-### 2.1 GitHub Actions Workflow (`.github/workflows/check.yml`)
-- **Current State**: Uses `ubuntu-latest` runner, sets up Python 3.11, installs `code/requirements.txt`, restores `.cooldown_state` / `.last_slots.json` cache, and executes `python code/main.py --once`.
-- **Bottlenecks**:
-  1. `code/requirements.txt` does not include `playwright`.
-  2. Workflow does not execute `playwright install --with-deps chromium`. Without `--with-deps`, headless Chromium fails on Linux due to missing shared libraries (e.g., `libnss3`, `libgbm1`, `libasound2`).
-  3. Environment variables passed to the job only include static cookie secrets (`COLSUBSIDIO_SISTEMA_COOKIE`, `COLSUBSIDIO_CSRF_TOKEN`), omitting login credentials (`COLSUBSIDIO_USER`, `COLSUBSIDIO_PASS`).
-  4. When session cookies expire, `main.py` triggers `SessionExpiredException`. Because auto-healing in `main.py` was guarded by `if sys.platform == "win32"`, the Linux runner immediately aborts with exit code 1.
-
-### 2.2 Legacy Cookie Extraction (`code/get_cookies.py`)
-- Uses Windows `crypt32.dll` DPAPI decryption and searches Chrome/Edge user profile paths (`LOCALAPPDATA`).
-- Incompatible with Linux CI/CD environments.
-- High risk of database locking errors (`PermissionError`) if local browser is running.
-
-### 2.3 Local Batch Scripts
-- `actualizar_cookies.bat`: Hardcodes local user Python path `C:\Users\andre\AppData\Local\Python\bin\python.exe` with fallback to `python`. Invokes `code/get_cookies.py`.
-- `ejecutar_revisor_local.bat`: Invokes `code/get_cookies.py` followed by `code/main.py`.
+This analysis provides exact step-by-step instructions for refactoring the test suite (`harness/tests/test_scraper.py`, `harness/tests/test_notifier.py`, `harness/tests/test_get_cookies.py`) and corresponding source code files.
 
 ---
 
-## 3. Playwright Dependency Requirements
+## 1. Test Suite Cleanup Instructions
 
-To support automated headless login, the project requires:
+### A. `harness/tests/test_scraper.py`
+- **File Location**: `j:\Mi unidad\Natacion Colsubsidio\harness\tests\test_scraper.py`
+- **Actions Required**:
+  1. **Delete Legacy Reservation Test Cases**:
+     - Remove `test_book_slot_success` (lines 128–161 in current file).
+     - Remove `test_book_slot_auto_retry_success` (lines 248–283 in current file).
+  2. **Retain and Verify Active Scraper Test Cases**:
+     - `test_scraper_init()`: Confirms initialization sets `sistema` and `Csrf-Token` session cookies.
+     - `test_fetch_available_dates_success()`: Mocks `requests.Session.post` for endpoint `.../calendario` and verifies extracted date list `["2026-06-10", "2026-06-12"]`.
+     - `test_fetch_slots_for_date_success()`: Mocks `requests.Session.post` for endpoint `.../disponibilidad?filtrarSinCupo=0` and verifies slot parsing (`fecha`, `hora`, `cupos`, `raw_horario`, `zonas`).
+     - `test_session_expired_http_401()`: Verifies HTTP 401 raises `SessionExpiredException`.
+     - `test_session_expired_json_unauthorized()`: Verifies JSON response `{"status": "Unauthorized"}` raises `SessionExpiredException`.
+     - `test_session_expired_html_redirect()`: Verifies HTML response containing `loguearSitio` raises `SessionExpiredException`.
+     - `test_resilience_on_server_error()`: Verifies HTTP 500 returns empty list `[]` without crashing.
+     - `test_resilience_on_timeout()`: Verifies `requests.RequestException` returns empty list `[]`.
+     - `test_auto_retry_401_success()`: Verifies auto-retry flow upon HTTP 401 via `extract_colsubsidio_cookies()` and `update_env_file()`, updating session headers & cookies in memory.
+     - `test_in_memory_session_credentials_update()`: Verifies `update_session_credentials()` sets cookies for domain `www.diversioncolsubsidio.com` & `.diversioncolsubsidio.com` and header `Csrf-Token`.
+     - `test_persistent_401_raises_session_expired_exception()`: Verifies persistent HTTP 401 after retry re-raises `SessionExpiredException`.
+     - `test_retry_failure_when_renewal_fails()`: Verifies failed renewal re-raises `SessionExpiredException` immediately.
 
-1. **Python Package (`code/requirements.txt`)**:
-   - `playwright>=1.40.0`
-   - `requests>=2.31.0` (existing)
-   - `pytest>=7.4.0` (existing)
+### B. `harness/tests/test_notifier.py`
+- **File Location**: `j:\Mi unidad\Natacion Colsubsidio\harness\tests\test_notifier.py`
+- **Actions Required**:
+  1. **Delete Legacy Interactive Command Test Case**:
+     - Remove `test_get_incoming_commands_success` (lines 114–142 in current file).
+  2. **Retain and Verify Active Notifier Test Cases**:
+     - `test_notifier_init()`: Confirms initialization with token and chat_id.
+     - `test_send_message_missing_credentials()`: Confirms returns `False` when credentials missing.
+     - `test_send_message_success()`: Confirms Markdown payload posted to Telegram API.
+     - `test_send_message_http_error()`: Confirms HTTP errors return `False`.
+     - `test_send_message_network_error()`: Confirms network exceptions return `False`.
+     - `test_notify_venue_slots_deduplication()`: Confirms deduplication supresses identical alerts within cache window.
+     - `test_notify_venue_slots_expiration()`: Confirms cache expiry re-notifies after configured duration.
+  3. **Clean Notification Format Verification**:
+     - Ensure tests assert clean text format without `/agendar_...` interactive command links.
 
-2. **Browser Binary**:
-   - Chromium headless browser binary (`python -m playwright install chromium`).
-
-3. **Linux System Libraries (GitHub Actions `ubuntu-latest`)**:
-   - Installed via `python -m playwright install --with-deps chromium`.
-
----
-
-## 4. GitHub Actions Workflow Refactoring Plan
-
-### 4.1 Required Changes in `.github/workflows/check.yml`
-
-1. **Update Dependency Installation Step**:
-   Replace:
-   ```yaml
-   - name: Instalar Dependencias
-     run: |
-       python -m pip install --upgrade pip
-       pip install -r code/requirements.txt
-   ```
-   With:
-   ```yaml
-   - name: Instalar Dependencias y Playwright Chromium
-     run: |
-       python -m pip install --upgrade pip
-       pip install -r code/requirements.txt
-       python -m playwright install --with-deps chromium
-   ```
-
-2. **Add Playwright Browser Caching (Performance Optimization)**:
-   Add an `actions/cache` step to cache `~/.cache/ms-playwright`:
-   ```yaml
-   - name: Cache Playwright Browsers
-     uses: actions/cache@v5
-     with:
-       path: ~/.cache/ms-playwright
-       key: ${{ runner.os }}-playwright-${{ hashFiles('code/requirements.txt') }}
-       restore-keys: |
-         ${{ runner.os }}-playwright-
-   ```
-
-3. **Pass Login Credentials Secrets**:
-   Add `COLSUBSIDIO_USER` and `COLSUBSIDIO_PASS` to `env` block in `Ejecutar Revisor` step:
-   ```yaml
-   COLSUBSIDIO_USER: ${{ secrets.COLSUBSIDIO_USER }}
-   COLSUBSIDIO_PASS: ${{ secrets.COLSUBSIDIO_PASS }}
-   ```
+### C. `harness/tests/test_get_cookies.py`
+- **File Location**: `j:\Mi unidad\Natacion Colsubsidio\harness\tests\test_get_cookies.py`
+- **Actions Required**:
+  - Retain all 8 test cases intact. All tests in this module cover Playwright login authentication, cookie extraction, `.env` file updating, and OS-specific fallbacks (F1/R1 requirements).
 
 ---
 
-## 5. Local Runner & Batch Script Compatibility
+## 2. Complementary Source Code Purge Instructions
 
-### 5.1 Batch Script Updates (`actualizar_cookies.bat` & `ejecutar_revisor_local.bat`)
-- Retain flexible Python executable discovery (`PYTHON_EXE`).
-- When `get_cookies.py` is updated to Playwright, running `actualizar_cookies.bat` or `ejecutar_revisor_local.bat` will trigger Playwright headless (or headful) login without requiring Chrome/Edge process termination (`taskkill`).
-- Graceful error handling: If `playwright` is not installed locally, output a clean user prompt directing the user to run `pip install playwright && playwright install chromium`.
+To ensure test suite execution passes cleanly without dead imports or references, Worker must apply corresponding changes in `code/`:
 
----
+1. **`code/scraper.py`**:
+   - Delete `ColsubsidioScraper.book_slot()` method (lines 245–345).
 
-## 6. Environment Configuration (`.env.example`) Updates
+2. **`code/notifier.py`**:
+   - Delete `TelegramNotifier.get_incoming_commands()` method (lines 75–104).
+   - In `TelegramNotifier.notify_venue_slots()`: Remove `/agendar_...` command string generation (lines 184–188). Format slot line cleanly as: `• ⏰ \`{s['hora']}\` 🎟️ \`{s['cupos']}\` cupos`.
 
-`.env.example` should be updated to include credential placeholders required for automated Playwright login:
+3. **`code/config.py`**:
+   - Delete `COLSUBSIDIO_TIQUETERA_ID` and `_tiq_val` configuration (lines 31–33).
 
-```env
-# --- COLSUBSIDIO LOGIN CREDENTIALS (For Playwright Automated Self-Healing) ---
-# Document number or username for Colsubsidio account login
-COLSUBSIDIO_USER=tu_usuario_o_documento_aqui
-
-# Account password for Colsubsidio login
-COLSUBSIDIO_PASS=tu_contrasena_aqui
-
-# Document type (e.g., CC, CE, PASAPORTE)
-COLSUBSIDIO_DOCUMENT_TYPE=CC
-COLSUBSIDIO_DOCUMENT_NUMBER=tu_numero_documento_aqui
-```
+4. **`code/main.py`**:
+   - Remove section 1 (interactive command processing loop checking `get_incoming_commands()` and executing `/agendar` via `book_slot()`) (lines 229–280).
 
 ---
 
-## 7. Test Harness & Quality Control (`harness/`)
-
-1. **Unit Test Coverage (`harness/tests/`)**:
-   - Add unit tests for `get_cookies.py` Playwright helper under `harness/tests/test_get_cookies.py`.
-   - Mock Playwright page interaction (`sync_playwright`) in pytest using `unittest.mock` to ensure unit tests execute fast without actual network traffic.
-2. **Environment Health Check (`harness/init.ps1` & `harness/init.sh`)**:
-   - The initialization scripts check `python -m pytest tests/` and validate `code/requirements.txt`.
-   - `init.ps1` and `init.sh` remain fully compatible.
+## 3. Verification Checklist for Worker
+- [ ] `pytest harness/tests/test_scraper.py` runs and passes 100% of remaining 12 tests.
+- [ ] `pytest harness/tests/test_notifier.py` runs and passes 100% of remaining 7 tests.
+- [ ] `pytest harness/tests/test_get_cookies.py` runs and passes 100% of 8 tests.
+- [ ] No references to `book_slot`, `get_incoming_commands`, or `COLSUBSIDIO_TIQUETERA_ID` remain in `code/` or `harness/tests/`.

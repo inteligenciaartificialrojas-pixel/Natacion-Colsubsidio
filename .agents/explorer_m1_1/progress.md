@@ -1,11 +1,9 @@
-# Progress Log — Explorer 1 (Milestone 1)
+# Progress Log — explorer_m1_1
 
-Last visited: 2026-08-09T18:22:31Z
+Last visited: 2026-08-12T04:40:39Z
 
-- [x] Initialized `ORIGINAL_REQUEST.md` and `BRIEFING.md`
-- [x] Analyzed existing codebase (`code/get_cookies.py`, `code/config.py`, `code/scraper.py`, `code/main.py`, `code/requirements.txt`, `.env`, `.env.example`, `actualizar_cookies.bat`, `.github/workflows/check.yml`)
-- [x] Evaluated Colsubsidio login URL (`https://www.diversioncolsubsidio.com/sistema.php/default/loguearSitio`), form fields, cookie extraction (`sistema`, `Csrf-Token`), and env loading
-- [x] Evaluated Python environment and Playwright availability (`Python 3.14.6`, `playwright` missing)
-- [x] Authored comprehensive `analysis.md` report
-- [x] Authored self-contained 5-component `handoff.md` report
-- [x] Sent notification message to parent agent (`2aca26f8-a79b-4b4a-a36a-921521a80c8c`)
+- [x] Initialized BRIEFING.md and DISPATCH.md.
+- [x] Analyzed codebase and identified legacy reservation references (`book_slot`, `COLSUBSIDIO_TIQUETERA_ID`, `/agendar`, `/reservar`) across 6 target files.
+- [x] Verified Scraper availability endpoints (`/v1/centro_entrenamiento/{id}/practicalibre/calendario` & `disponibilidad`) and session cookie handling (`COLSUBSIDIO_SISTEMA_COOKIE`, `COLSUBSIDIO_CSRF_TOKEN`).
+- [x] Write detailed `analysis.md` with instructions for Worker.
+- [x] Deliver 5-component `handoff.md`.

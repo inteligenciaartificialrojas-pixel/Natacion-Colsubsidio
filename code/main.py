@@ -7,7 +7,12 @@ import os
 import json
 import re
 from datetime import datetime, timedelta, date
-from config import VENUE_SERVICE_IDS, DEFAULT_CHECK_INTERVAL_SECONDS
+from config import (
+    VENUE_SERVICE_IDS,
+    DEFAULT_CHECK_INTERVAL_SECONDS,
+    WEEKDAY_MORNING_END_HOUR,
+    WEEKDAY_EVENING_START_HOUR,
+)
 from scraper import ColsubsidioScraper, SessionExpiredException
 from notifier import TelegramNotifier
 
@@ -38,15 +43,13 @@ def load_cooldown_state() -> dict:
                     # Compatibilidad con formato antiguo de float simple
                     return {
                         "last_expiry_alert_time": float(content),
-                        "last_report_sent": "",
-                        "last_processed_update_id": 0
+                        "last_report_sent": ""
                     }
         except Exception:
             pass
     return {
         "last_expiry_alert_time": 0.0,
-        "last_report_sent": "",
-        "last_processed_update_id": 0
+        "last_report_sent": ""
     }
 
 def save_cooldown_state(state: dict) -> None:
@@ -155,25 +158,49 @@ def is_colombian_holiday(target_date: date) -> bool:
 
     return target_date in _holidays_cache[year]
 
-def is_within_preferred_schedule(date_str: str, time_str: str) -> bool:
+def is_within_preferred_schedule(date_or_dt: datetime | date | str, time_str: str | None = None) -> bool:
     """
     Evalúa si la fecha y hora corresponden a las preferencias del usuario:
-    - Sábados, Domingos y Festivos colombianos: Cualquier horario.
-    - Lunes a Viernes no festivos: Hora de inicio entre las 18:00 y las 20:00.
+    - Sábados, Domingos y Festivos colombianos: Cualquier horario (True, 24h).
+    - Lunes a Viernes no festivos: Turnos < 07:00 (07:00 no permitido) o >= 17:00 (17:00 permitido).
+    
+    Soporta entradas polimórficas:
+    - `datetime`: `is_within_preferred_schedule(datetime(2026, 8, 24, 18, 30))`
+    - `date` + `time_str`: `is_within_preferred_schedule(date(2026, 8, 24), "18:30")`
+    - `str` + `time_str`: `is_within_preferred_schedule("2026-08-24", "18:30")`
     """
     try:
-        dt = datetime.strptime(date_str, "%Y-%m-%d")
-        day_of_week = dt.weekday()  # 0 es Lunes, 6 es Domingo
-        
-        # Si es fin de semana (sábado/domingo) o es día festivo
-        if day_of_week >= 5 or is_colombian_holiday(dt.date()):
+        target_date: date | None = None
+        hour: int | None = None
+
+        if isinstance(date_or_dt, datetime):
+            target_date = date_or_dt.date()
+            hour = date_or_dt.hour
+        elif isinstance(date_or_dt, date):
+            target_date = date_or_dt
+        elif isinstance(date_or_dt, str):
+            clean_str = date_or_dt.strip()
+            if "T" in clean_str or " " in clean_str:
+                dt = datetime.fromisoformat(clean_str.replace("Z", ""))
+                target_date = dt.date()
+                hour = dt.hour
+            else:
+                target_date = datetime.strptime(clean_str, "%Y-%m-%d").date()
+
+        if time_str is not None:
+            hour = int(str(time_str).strip().split(":")[0])
+
+        if target_date is None or hour is None:
+            return False
+
+        # Si es fin de semana (sábado/domingo) o es día festivo colombiano
+        if target_date.weekday() >= 5 or is_colombian_holiday(target_date):
             return True
         else:
-            # Lunes a Viernes normal
-            hour = int(time_str.split(":")[0])
-            return 18 <= hour <= 20
+            # Lunes a Viernes no festivo: < 07:00 o >= 17:00
+            return hour < WEEKDAY_MORNING_END_HOUR or hour >= WEEKDAY_EVENING_START_HOUR
     except Exception as e:
-        logger.error("Error al evaluar horario preferido (%s, %s): %s", date_str, time_str, e)
+        logger.error("Error al evaluar horario preferido (%s, %s): %s", date_or_dt, time_str, e)
         return False
 
 def check_venues(scraper: ColsubsidioScraper, notifier: TelegramNotifier, force_send: bool = False) -> None:
@@ -226,59 +253,7 @@ def main() -> None:
     interval = DEFAULT_CHECK_INTERVAL_SECONDS
     state = load_cooldown_state()
 
-    # 1. Procesar comandos interactivos de Telegram antes de hacer el chequeo
-    offset = state.get("last_processed_update_id", 0) + 1
-    updates = notifier.get_incoming_commands(offset=offset)
-
-    for update in updates:
-        update_id = update.get("update_id")
-        if update_id:
-            state["last_processed_update_id"] = max(state["last_processed_update_id"], update_id)
-
-        message = update.get("message", {})
-        text = message.get("text", "").strip()
-        chat_id = message.get("chat", {}).get("id")
-
-        # Seguridad: Solo procesar comandos del chat_id autorizado
-        if str(chat_id) != str(notifier.chat_id):
-            continue
-
-        # Match del comando de agendamiento (/agendar_ID_YYYY_MM_DD_HH_MM)
-        match = re.match(r"^/agendar_(\d+)_(\d{4}_\d{2}_\d{2})_(\d{2}_\d{2})$", text)
-        if match:
-            service_id = int(match.group(1))
-            date_str = match.group(2).replace("_", "-")
-            time_str = match.group(3).replace("_", ":")
-
-            from config import VENUE_SERVICE_IDS, COLSUBSIDIO_TIQUETERA_ID
-            sede_name = next((k for k, v in VENUE_SERVICE_IDS.items() if v == service_id), "Desconocida")
-
-            logger.info("Comando de agendamiento recibido para: %s, %s, %s", sede_name, date_str, time_str)
-            notifier.send_message(f"⏳ *[Procesando Reserva]*\n\nSede: *{sede_name}*\nFecha: *{date_str}*\nHora: *{time_str}*\nUsando tiquetera: `{COLSUBSIDIO_TIQUETERA_ID}`\n\nPor favor espera...")
-
-            if not COLSUBSIDIO_TIQUETERA_ID:
-                notifier.send_message("❌ *Error al agendar:* No se encuentra configurado el ID de tiquetera (`COLSUBSIDIO_TIQUETERA_ID`).")
-                continue
-
-            success, msg = scraper.book_slot(service_id, date_str, time_str, COLSUBSIDIO_TIQUETERA_ID)
-            if success:
-                notifier.send_message(
-                    "🎉 *¡Reserva Realizada con Éxito!* 🎉\n\n"
-                    f"📍 *Sede:* {sede_name}\n"
-                    f"📅 *Fecha:* {date_str}\n"
-                    f"⏰ *Hora:* {time_str}\n"
-                    "🎟️ *Confirmación:* La reserva ha sido ingresada en la plataforma Colsubsidio."
-                )
-            else:
-                notifier.send_message(
-                    "⚠️ *Fallo al Reservar* ⚠️\n\n"
-                    f"📍 *Sede:* {sede_name}\n"
-                    f"📅 *Fecha:* {date_str}\n"
-                    f"⏰ *Hora:* {time_str}\n"
-                    f"❌ *Motivo:* `{msg}`"
-                )
-
-    # 2. Calcular hora local de Colombia (Bogotá UTC-5)
+    # 1. Calcular hora local de Colombia (Bogotá UTC-5)
     now_colombia = datetime.utcnow() - timedelta(hours=5)
     date_str = now_colombia.strftime("%Y-%m-%d")
     hour = now_colombia.hour

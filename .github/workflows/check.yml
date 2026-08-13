@@ -64,7 +64,6 @@ jobs:
         COLSUBSIDIO_CSRF_TOKEN: ${{ secrets.COLSUBSIDIO_CSRF_TOKEN }}
         COLSUBSIDIO_DOCUMENT_TYPE: ${{ secrets.COLSUBSIDIO_DOCUMENT_TYPE }}
         COLSUBSIDIO_DOCUMENT_NUMBER: ${{ secrets.COLSUBSIDIO_DOCUMENT_NUMBER }}
-        COLSUBSIDIO_TIQUETERA_ID: ${{ secrets.COLSUBSIDIO_TIQUETERA_ID }}
       run: |
         if [ "${{ github.event.inputs.force }}" = "true" ]; then
           python code/main.py --once --force

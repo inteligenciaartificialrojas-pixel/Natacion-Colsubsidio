@@ -1,52 +1,71 @@
-# Handoff Report: Milestone 1 — Authentication & Cookie Management Investigation
+# Handoff Report: Milestone 1 Analysis & Implementation Plan
 
 ## 1. Observation
+Direct codebase inspection confirmed the exact locations of legacy reservation logic and cookie-authenticated scraper structures:
 
-- **`code/get_cookies.py` (lines 19-42, 94-156)**: Currently uses Windows DPAPI (`ctypes.windll.crypt32.CryptUnprotectData`) and direct SQLite extraction from Chrome/Edge local user data (`AppData\Local\...`). Requires user to have manually logged into `diversioncolsubsidio.com` in Chrome/Edge, and kills browser processes (`taskkill /F /IM msedge.exe`, `taskkill /F /IM chrome.exe`).
-- **`code/config.py` (lines 24-27)**: Reads `COLSUBSIDIO_SISTEMA_COOKIE`, `COLSUBSIDIO_CSRF_TOKEN`, `COLSUBSIDIO_DOCUMENT_TYPE`, `COLSUBSIDIO_DOCUMENT_NUMBER`. Does NOT currently define or read `COLSUBSIDIO_USER` or `COLSUBSIDIO_PASS`.
-- **`.env.example` (lines 11-16)**: Only includes placeholders for `COLSUBSIDIO_SISTEMA_COOKIE` and `COLSUBSIDIO_CSRF_TOKEN`. Missing credential placeholders `COLSUBSIDIO_USER` and `COLSUBSIDIO_PASS`.
-- **`code/scraper.py` (lines 42-61)**: Checks HTTP responses for expiration via `_check_unauthorized(response)`. Throws `SessionExpiredException` on 401 status or redirection/text containing `loguearSitio`.
-- **`code/requirements.txt` (lines 1-3)**: Contains `requests>=2.31.0` and `pytest>=7.4.0`. `playwright` is missing.
-- **Python Environment Command Output**:
-  - `python -c "import playwright; print('playwright installed')"` returned `ModuleNotFoundError: No module named 'playwright'`.
-  - `python -V` returned `Python 3.14.6`.
-- **`.github/workflows/check.yml` (lines 46-59)**: Runs `python code/main.py --once` on `ubuntu-latest`. Has no browser installation step or credential secrets for `COLSUBSIDIO_USER` and `COLSUBSIDIO_PASS`.
+1. **`code/config.py`**:
+   - Lines 32–33 define legacy ticket ID:
+     ```python
+     _tiq_val = os.environ.get("COLSUBSIDIO_TIQUETERA_ID") or "6370683"
+     COLSUBSIDIO_TIQUETERA_ID: int | None = int(_tiq_val) if _tiq_val.isdigit() else None
+     ```
+
+2. **`code/scraper.py`**:
+   - Lines 245–345 contain `book_slot()` method performing `POST /v1/centro_entrenamiento/{service_id}/practicalibre/reservar`.
+   - Lines 109–147 (`fetch_available_dates`) and 158–244 (`fetch_slots_for_date`) already query REST endpoints (`/calendario` and `/disponibilidad`) with session cookie headers (`sistema`, `Csrf-Token`) and handle HTTP 401 via `SessionExpiredException`.
+
+3. **`code/main.py`**:
+   - Lines 247–280 handle `/agendar` interactive Telegram reservation command matching `r"^/agendar_(\d+)_(\d{4}_\d{2}_\d{2})_(\d{2}_\d{2})$"` and calling `scraper.book_slot`.
+
+4. **`code/notifier.py`**:
+   - Lines 184–188 append interactive reservation links to notification messages:
+     ```python
+     command = f"/agendar_{service_id}_{date_key}_{time_key}"
+     lines.append(f"• ⏰ `{s['hora']}` 🎟️ `{s['cupos']}` cupos 👉 {command}")
+     ```
+
+5. **`.github/workflows/check.yml`**:
+   - Line 67 injects `COLSUBSIDIO_TIQUETERA_ID: ${{ secrets.COLSUBSIDIO_TIQUETERA_ID }}` into environment variables.
+
+6. **`harness/tests/test_scraper.py`**:
+   - Lines 128–161 (`test_book_slot_success`) and lines 248–283 (`test_book_slot_auto_retry_success`) test reservation booking logic.
 
 ---
 
 ## 2. Logic Chain
-
-1. **Step 1**: From Observation 1 (`code/get_cookies.py`), the existing cookie extraction mechanism depends on Windows-specific DPAPI calls and pre-existing local browser session databases.
-2. **Step 2**: From Observation 1 & 6 (`code/get_cookies.py` & `.github/workflows/check.yml`), this DPAPI extraction cannot work in headless CI/CD environments like GitHub Actions (running Ubuntu) or when local browser sessions are expired.
-3. **Step 3**: From Observation 2 & 3 (`code/config.py` & `.env.example`), credentials (`COLSUBSIDIO_USER` and `COLSUBSIDIO_PASS`) are required to perform programmatic login on `https://www.diversioncolsubsidio.com/sistema.php/default/loguearSitio`, but are not yet declared in config or environment templates.
-4. **Step 4**: From Observation 5 (Python environment output), Playwright is currently not installed in the local environment and must be added to `code/requirements.txt` alongside browser binary setup (`playwright install chromium`).
-5. **Step 5**: From Observation 4 (`code/scraper.py`), `ColsubsidioScraper` raises `SessionExpiredException` when cookies expire. Integrating Playwright-driven `login_and_get_cookies()` into `code/get_cookies.py` will enable cross-platform automated headless login and seamless self-healing cookie recovery.
+1. **Scope Definition**: The objective of Milestone 1 is to simplify the scraper to function exclusively as a read-only availability checker and to remove all ticket reservation and booking code (F1, F2).
+2. **Scraper Refactoring (F1)**:
+   - `fetch_available_dates` and `fetch_slots_for_date` in `code/scraper.py` correctly target REST endpoints `/v1/centro_entrenamiento/{id}/practicalibre/calendario` and `/disponibilidad?filtrarSinCupo=0`.
+   - Session cookies (`sistema` and `Csrf-Token`) are correctly formatted into requests cookies and headers, with auto-retry and Playwright session renewal on HTTP 401 / `SessionExpiredException`.
+3. **Legacy Code Removal (F2)**:
+   - `book_slot()` in `code/scraper.py` is the sole entry point for sending reservation POST requests to Colsubsidio. Deleting it completes the scraper simplification.
+   - `COLSUBSIDIO_TIQUETERA_ID` in `code/config.py` and `.github/workflows/check.yml` is no longer needed.
+   - `/agendar` command parser in `code/main.py` and `/agendar` command formatting in `code/notifier.py` are part of the interactive reservation workflow. Purging them cleans Telegram alerts and removes unused command loops.
+   - `test_book_slot_success` and `test_book_slot_auto_retry_success` in `harness/tests/test_scraper.py` must be removed so the test suite passes cleanly after `book_slot` is deleted.
 
 ---
 
 ## 3. Caveats
-
-- **Network Restrictions**: Due to CODE_ONLY execution constraints, live external HTTP requests to `diversioncolsubsidio.com` were not made during this read-only investigation turn. Form element selector names (`select[name="tipo_documento"]`, `input[name="documento"]`, `input[name="clave"]`) reflect the standard Colsubsidio portal DOM schema analyzed in codebase references and specs.
-- **CI/CD Execution Time**: Headless browser launch with Playwright adds approximately 3-5 seconds overhead compared to direct HTTP requests.
+- `COLSUBSIDIO_DOCUMENT_TYPE` and `COLSUBSIDIO_DOCUMENT_NUMBER` must **not** be removed from `code/config.py` because `fetch_slots_for_date()` requires `persona` data in its request body to retrieve valid slot availability for document holders.
+- `get_incoming_commands` in `code/notifier.py` can remain as a utility function, but its call in `code/main.py` should no longer trigger reservation actions.
 
 ---
 
 ## 4. Conclusion
-
-- The existing cookie extraction in `code/get_cookies.py` is a manual, Windows-only workaround that fails in CI/CD and requires prior manual user interaction.
-- Milestone 2 can implement a clean, cross-platform `login_and_get_cookies(user, password)` function in `code/get_cookies.py` using Playwright Chromium headless automation.
-- The interface contract `login_and_get_cookies(user, password) -> dict` is fully defined and ready for implementation.
-- `requirements.txt`, `config.py`, `.env.example`, and `.github/workflows/check.yml` require minor additions (`playwright` dependency, `COLSUBSIDIO_USER`, `COLSUBSIDIO_PASS`) to enable end-to-end self-healing.
+Milestone 1 is fully specified and ready for Worker execution. All target files, line numbers, and exact code deletions/refactorings have been mapped in `analysis.md`. Proceeding with Worker implementation will achieve 100% compliance with Feature 1 and Feature 2 without breaking existing availability polling or Telegram alert mechanisms.
 
 ---
 
 ## 5. Verification Method
-
-1. **Inspect Analysis Reports**:
-   - Verify `i:\Mi unidad\Natacion Colsubsidio\.agents\explorer_m1_1\analysis.md` exists and contains detailed analysis.
-   - Verify `i:\Mi unidad\Natacion Colsubsidio\.agents\explorer_m1_1\handoff.md` exists and contains the 5-component handoff structure.
-2. **Environment & Dependency Checks**:
-   - Run `python -c "import config"` to verify current config module loading.
-   - Check `code/requirements.txt` to confirm missing `playwright` package before Milestone 2 updates it.
-3. **Invalidation Conditions**:
-   - The analysis would be invalidated if Colsubsidio changes login URL endpoint from `https://www.diversioncolsubsidio.com/sistema.php/default/loguearSitio` to a third-party SAML/OAuth redirect provider without direct username/password fields.
+Worker can verify implementation by executing:
+1. **Pytest Test Suite Run**:
+   ```bash
+   pytest harness/tests/test_scraper.py harness/tests/test_notifier.py harness/tests/test_orchestrator.py
+   ```
+2. **Codebase Grep Check**:
+   Confirm 0 matches for `book_slot` or `COLSUBSIDIO_TIQUETERA_ID` across `code/` and `.github/`.
+3. **Dry-run Execution**:
+   ```bash
+   python code/main.py --once
+   ```
+   (Verify clean availability check without reservation command outputs or errors).

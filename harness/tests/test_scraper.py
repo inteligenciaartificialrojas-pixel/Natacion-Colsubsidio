@@ -124,41 +124,6 @@ def test_resilience_on_timeout(mock_post: MagicMock) -> None:
     scraper = ColsubsidioScraper(session_cookie="sess", csrf_token="csrf")
     assert scraper.fetch_available_dates(service_id=232) == []
 
-@patch("requests.Session.post")
-def test_book_slot_success(mock_post: MagicMock) -> None:
-    """Verifica que book_slot realice la reserva correctamente cuando el API responde 200."""
-    mock_response_dispo = MagicMock()
-    mock_response_dispo.status_code = 200
-    mock_response_dispo.headers = {"Content-Type": "application/json"}
-    mock_response_dispo.json.return_value = {
-        "horarios": [
-            {
-                "horario": {"fecha": "2026-06-10", "hora_inicio": "18:00:00", "hora_fin": "18:50:00"},
-                "duracion": 50,
-                "zonas": [{"id": 12, "capacidad_disponible": 1}]
-            }
-        ]
-    }
-    
-    mock_response_reserva = MagicMock()
-    mock_response_reserva.status_code = 200
-    mock_response_reserva.headers = {"Content-Type": "application/json"}
-    mock_response_reserva.json.return_value = {
-        "turnos_practica_libre": [
-            {
-                "id": 999
-            }
-        ]
-    }
-    
-    mock_post.side_effect = [mock_response_dispo, mock_response_reserva]
-    
-    scraper = ColsubsidioScraper(session_cookie="sess", csrf_token="csrf")
-    success, msg = scraper.book_slot(service_id=232, date_str="2026-06-10", time_str="18:00", tiquetera_id=6370683)
-    
-    assert success is True
-    assert "éxito" in msg.lower()
-    assert mock_post.call_count == 2
 
 @patch("get_cookies.update_env_file")
 @patch("get_cookies.extract_colsubsidio_cookies")
@@ -242,42 +207,4 @@ def test_retry_failure_when_renewal_fails(mock_post: MagicMock, mock_extract: Ma
     assert mock_post.call_count == 1
     mock_extract.assert_called_once()
 
-@patch("get_cookies.update_env_file")
-@patch("get_cookies.extract_colsubsidio_cookies")
-@patch("requests.Session.post")
-def test_book_slot_auto_retry_success(mock_post: MagicMock, mock_extract: MagicMock, mock_update_env: MagicMock) -> None:
-    """Verifica que book_slot recupere automáticamente un 401 en la petición de reservación."""
-    mock_response_dispo = MagicMock()
-    mock_response_dispo.status_code = 200
-    mock_response_dispo.headers = {"Content-Type": "application/json"}
-    mock_response_dispo.json.return_value = {
-        "horarios": [
-            {
-                "horario": {"fecha": "2026-06-10", "hora_inicio": "18:00:00", "hora_fin": "18:50:00"},
-                "duracion": 50,
-                "zonas": [{"id": 12, "capacidad_disponible": 1}]
-            }
-        ]
-    }
-
-    mock_response_reserva_401 = MagicMock()
-    mock_response_reserva_401.status_code = 401
-
-    mock_response_reserva_200 = MagicMock()
-    mock_response_reserva_200.status_code = 200
-    mock_response_reserva_200.headers = {"Content-Type": "application/json"}
-    mock_response_reserva_200.json.return_value = {
-        "turnos_practica_libre": [{"id": 1001}]
-    }
-
-    mock_post.side_effect = [mock_response_dispo, mock_response_reserva_401, mock_response_reserva_200]
-    mock_extract.return_value = {"sistema": "new_sess", "Csrf-Token": "new_csrf"}
-
-    scraper = ColsubsidioScraper(session_cookie="old_sess", csrf_token="old_csrf")
-    success, msg = scraper.book_slot(service_id=232, date_str="2026-06-10", time_str="18:00", tiquetera_id=123)
-
-    assert success is True
-    assert "éxito" in msg.lower()
-    assert mock_post.call_count == 3
-    mock_extract.assert_called_once()
 

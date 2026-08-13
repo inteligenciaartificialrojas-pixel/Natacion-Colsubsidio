@@ -1,7 +1,7 @@
 """Pruebas adversariales exhaustivas para la lógica de auto-sanación de Milestone 3 (code/scraper.py).
 
 Cubre los 4 escenarios críticos requeridos por la auditoría de Challenger 1:
-1. 401 persistentes (agotamiento de reintentos, comportamiento en book_slot, fetch_available_dates y fetch_slots_for_date).
+1. 401 persistentes (agotamiento de reintentos, comportamiento en fetch_available_dates y fetch_slots_for_date).
 2. Respuestas JSON inesperadas / malformadas (status != "Unauthorized", respuestas tipo lista/primitivo, campos nulos/malformados).
 3. Errores de red durante la renovación de sesión (exceptions en extract_colsubsidio_cookies()).
 4. Reintentos y peticiones concurrentes (hilos simultáneos recibiendo 401).
@@ -67,42 +67,6 @@ def test_persistent_401_in_fetch_slots_for_date(
     mock_extract.assert_called_once()
 
 
-@patch("get_cookies.update_env_file")
-@patch("get_cookies.extract_colsubsidio_cookies")
-@patch("requests.Session.post")
-def test_persistent_401_in_book_slot_raises_exception(
-    mock_post: MagicMock, mock_extract: MagicMock, mock_update_env: MagicMock
-) -> None:
-    """Verifica cómo responde book_slot ante un 401 persistente durante la fase de reserva."""
-    mock_dispo_200 = MagicMock()
-    mock_dispo_200.status_code = 200
-    mock_dispo_200.headers = {"Content-Type": "application/json"}
-    mock_dispo_200.json.return_value = {
-        "horarios": [
-            {
-                "horario": {"fecha": "2026-08-10", "hora_inicio": "18:00:00", "hora_fin": "18:50:00"},
-                "duracion": 50,
-                "zonas": [{"id": 5, "capacidad_disponible": 1}]
-            }
-        ]
-    }
-
-    mock_reserva_401 = MagicMock()
-    mock_reserva_401.status_code = 401
-
-    # 1era llamada: dispo (200), 2da llamada: reserva (401), 3ra llamada: reintento reserva (401)
-    mock_post.side_effect = [mock_dispo_200, mock_reserva_401, mock_reserva_401]
-    mock_extract.return_value = {"sistema": "new_sess", "Csrf-Token": "new_csrf"}
-
-    scraper = ColsubsidioScraper(session_cookie="old_sess", csrf_token="old_csrf")
-
-    # book_slot eleva SessionExpiredException ante un 401 persistente
-    with pytest.raises(SessionExpiredException):
-        scraper.book_slot(service_id=232, date_str="2026-08-10", time_str="18:00", tiquetera_id=123)
-
-    assert mock_post.call_count == 3
-    mock_extract.assert_called_once()
-
 
 # ============================================================================
 # 2. PRUEBAS DE CUERPOS JSON INESPERADOS Y MALFORMADOS
@@ -142,19 +106,16 @@ def test_json_body_unauthorized_variants(mock_post: MagicMock) -> None:
     with pytest.raises(SessionExpiredException):
         scraper.fetch_available_dates(service_id=232)
 
-    # Evaluar B, C, D (si no lanzan SessionExpiredException, documentar la vulnerabilidad de la comprobación)
+    # Evaluar B, C, D (verificar que la comprobación defensiva mejorada detecte todas las variantes)
     for mock_r in [r_err, r_status_int, r_code]:
         mock_post.return_value = mock_r
-        try:
-            res = scraper.fetch_available_dates(service_id=232)
-            # Si retorna [] sin lanzar SessionExpiredException, no se activó la auto-sanación
-        except SessionExpiredException:
-            pass
+        with pytest.raises(SessionExpiredException):
+            scraper.fetch_available_dates(service_id=232)
 
 
 @patch("requests.Session.post")
-def test_json_body_is_list_causes_attribute_error(mock_post: MagicMock) -> None:
-    """Verifica qué ocurre cuando la API retorna una lista JSON (por ejemplo `[]` o `[{"error": "invalid"}]`)."""
+def test_json_body_is_list_handled_defensively(mock_post: MagicMock) -> None:
+    """Verifica que la API retorne [] de forma segura cuando la respuesta JSON es una lista."""
     r_list = MagicMock()
     r_list.status_code = 200
     r_list.headers = {"Content-Type": "application/json"}
@@ -163,13 +124,9 @@ def test_json_body_is_list_causes_attribute_error(mock_post: MagicMock) -> None:
 
     scraper = ColsubsidioScraper(session_cookie="sess", csrf_token="csrf")
 
-    # En fetch_available_dates: data.get("fechas") falla si data es una lista (AttributeError)
-    # Verificamos si la excepción es atrapada o si se propaga impredeciblemente.
-    with pytest.raises(AttributeError):
-        scraper.fetch_available_dates(service_id=232)
-
-    with pytest.raises(AttributeError):
-        scraper.fetch_slots_for_date(service_id=232, date_str="2026-08-10")
+    # En fetch_available_dates y fetch_slots_for_date, respuestas tipo lista se manejan sin excepciones
+    assert scraper.fetch_available_dates(service_id=232) == []
+    assert scraper.fetch_slots_for_date(service_id=232, date_str="2026-08-10") == []
 
 
 @patch("requests.Session.post")
@@ -183,10 +140,8 @@ def test_json_body_fechas_is_none(mock_post: MagicMock) -> None:
 
     scraper = ColsubsidioScraper(session_cookie="sess", csrf_token="csrf")
 
-    # data.get("fechas", {}) retorna None si la clave "fechas" existe con valor None
-    # Luego None.items() eleva AttributeError
-    with pytest.raises(AttributeError):
-        scraper.fetch_available_dates(service_id=232)
+    # Manejo defensivo: 'fechas': None retorna [] sin elevación de excepciones
+    assert scraper.fetch_available_dates(service_id=232) == []
 
 
 @patch("requests.Session.post")
@@ -206,9 +161,9 @@ def test_json_body_malformed_horarios_elements(mock_post: MagicMock) -> None:
 
     scraper = ColsubsidioScraper(session_cookie="sess", csrf_token="csrf")
 
-    # Debe elevar AttributeError o TypeError si no hay validación defensiva en la iteración
-    with pytest.raises((AttributeError, TypeError)):
-        scraper.fetch_slots_for_date(service_id=232, date_str="2026-08-10")
+    # Manejo defensivo: filtra elementos nulos/malformados de horarios sin elevar excepciones
+    slots = scraper.fetch_slots_for_date(service_id=232, date_str="2026-08-10")
+    assert isinstance(slots, list)
 
 
 # ============================================================================
@@ -250,8 +205,8 @@ def test_non_requests_exception_during_session_renewal(
 
     scraper = ColsubsidioScraper(session_cookie="old_sess", csrf_token="old_csrf")
 
-    # RuntimeError NO es atrapado en fetch_available_dates (solo atrapa SessionExpiredException, RequestException, ValueError)
-    with pytest.raises(RuntimeError):
+    # RuntimeError es capturado y envuelto en SessionExpiredException
+    with pytest.raises(SessionExpiredException):
         scraper.fetch_available_dates(service_id=232)
 
 

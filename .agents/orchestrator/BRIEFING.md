@@ -1,70 +1,82 @@
-# BRIEFING — 2026-08-09T14:16:05-05:00
+# BRIEFING — 2026-08-12T04:55:40Z
 
 ## Mission
-Execute Milestone 4 (CI/CD & Runner Compatibility) [DONE] and Milestone 5 (E2E Verification, Hardening & Final Audit) [DONE] for Colsubsidio Swimming Availability Self-Healing project.
+Orchestrate end-to-end refactoring and automation of Colsubsidio Swimming Availability Monitor per requirements in ORIGINAL_REQUEST.md.
 
 ## 🔒 My Identity
-- Archetype: teamwork_preview_orchestrator
+- Archetype: teamwork_preview_orchestrator (Gen 2 Successor)
 - Roles: orchestrator, user_liaison, human_reporter, successor
-- Working directory: i:\Mi unidad\Natacion Colsubsidio\.agents\orchestrator
+- Working directory: j:\Mi unidad\Natacion Colsubsidio\.agents\orchestrator
 - Original parent: parent
-- Original parent conversation ID: 217831ec-9d74-4ae3-a26c-67b55bde0ea5
+- Original parent conversation ID: 5e418242-b7dd-472f-89f3-5648d7095f08
 
 ## 🔒 My Workflow
 - **Pattern**: Project Pattern
-- **Scope document**: i:\Mi unidad\Natacion Colsubsidio\PROJECT.md
-1. **Decompose**: Decomposed into 5 milestones (M1-M5). All 5 milestones are 100% DONE and VERIFIED CLEAN.
-2. **Dispatch & Execute**: Completed M4 & M5 iteration loops with full Worker, Reviewer, Challenger, and Forensic Auditor verification.
-3. **On failure**: Retry -> Replace -> Skip -> Redistribute -> Redesign.
-4. **Succession**: Completed within Generation 2.
+- **Scope document**: j:\Mi unidad\Natacion Colsubsidio\.agents\orchestrator\PROJECT.md
+1. **Decompose**: Survey codebase via 3 Explorers + E2E Test track, build Feature Inventory & Milestones in PROJECT.md.
+2. **Dispatch & Execute**:
+   - **Direct (iteration loop)**: Explorer -> Worker -> Reviewer -> Challenger -> Auditor -> Gate per milestone.
+3. **On failure** (in this order):
+   - Retry: nudge stuck agent or re-send task
+   - Replace: spawn fresh agent with partial progress
+   - Skip: proceed without (only if non-critical)
+   - Redistribute: split stuck agent's remaining work
+   - Redesign: re-partition decomposition
+   - Escalate: report to parent (last resort)
+4. **Succession**: Self-succeed at 20 spawns, write handoff.md, spawn successor.
 - **Work items**:
-  1. M1: Exploration & Architecture Analysis [done]
-  2. M2: Playwright Automated Login & Session Renewal Module [done]
-  3. M3: Scraper Self-Healing Integration [done]
-  4. M4: CI/CD & Local Runner Compatibility [done]
-  5. M5: E2E Verification, Hardening & Final Audit [done]
-- **Current phase**: Complete
-- **Current focus**: Sentinel completion reporting
+  1. Survey & Codebase Exploration [done]
+  2. E2E Test Suite Creation [done: TEST_READY.md published]
+  3. Milestone 1 (Scraper Refactoring & Legacy Removal) [done: Forensic Audit CLEAN, Reviewers APPROVE]
+  4. Milestone 2 (Filter Engine & Deduplication) [in-progress]
+  5. Milestone 3 (CI/CD Cron & DevTools Docs) [pending]
+  6. Milestone 4 (Final E2E Pass & Coverage Hardening) [pending]
+- **Current phase**: 2 (Executing Milestone 2)
+- **Current focus**: Executing Milestone 2 (Strict Schedule Filter Engine & Clean Telegram Notifications)
 
 ## 🔒 Key Constraints
 - NEVER write, modify, or create source code files directly.
-- NEVER run build/test commands yourself — require workers to do so.
-- Forensic Auditor audit is a BINARY VETO. Violation means failure, no exceptions.
-- Do NOT reuse subagents after handoff — spawn fresh.
+- NEVER run build/test commands directly.
+- Dispatch Explorers for technical investigation.
+- Strictly adhere to non-negotiable Forensic Auditor VETO.
+- Include path to ORIGINAL_REQUEST.md in every subagent dispatch.
 
 ## Current Parent
-- Conversation ID: 217831ec-9d74-4ae3-a26c-67b55bde0ea5
-- Updated: 2026-08-09T14:16:05-05:00
+- Conversation ID: 5e418242-b7dd-472f-89f3-5648d7095f08
+- Updated: 2026-08-12T04:55:29Z
 
 ## Key Decisions Made
-- Milestone 4 & Milestone 5 verified CLEAN & APPROVED by Reviewers, Challengers, and Forensic Auditor.
-- Root `PROJECT.md` updated with all milestones set to status `DONE`.
+- Synthesized survey findings into PROJECT.md with 7 features and 5 milestones.
+- Milestone 1 completed & verified (Forensic Audit CLEAN).
+- Self-succeeded at spawn count 22/20. Gen 2 Orchestrator taking over for M2, M3, M4.
 
 ## Team Roster
 | Agent | Type | Work Item | Status | Conv ID |
 |-------|------|-----------|--------|---------|
-| Worker M4 Fix | teamwork_preview_worker | Remediation M4 | completed | 15d8de4f-f03f-419d-9aaf-55e3bdd91919 |
-| Worker M5 | teamwork_preview_worker | E2E Verification & Hardening | completed | 727a07a5-9b62-43f4-8a3d-d366f8ba536d |
-| Reviewer 1 M5 | teamwork_preview_reviewer | E2E & Spec Review (M5) | completed (APPROVED) | cbd4c1e8-3392-43e2-889b-a53ad5ccb6cc |
-| Reviewer 2 M5 | teamwork_preview_reviewer | Quality & Security Review (M5) | completed (APPROVED) | a5769f64-5926-420a-8634-a71da1b160fa |
-| Challenger 1 M5 | teamwork_preview_challenger | Expired Cookie & Holiday Stress Test | completed (PASSED) | f47fa66d-1549-434e-b1b4-0b0cef918451 |
-| Challenger 2 M5 | teamwork_preview_challenger | Exception & Atomic Writing Test | completed (PASSED) | 6e5937c3-43a4-4ca0-8b19-2a54da6377a8 |
-| Auditor M5 | teamwork_preview_auditor | Final Forensic Integrity Audit (M5) | completed (CLEAN) | 63fd39ec-1641-4402-a166-a6075816da08 |
+| explorer_m2_1 | teamwork_preview_explorer | M2 Schedule Filter & Holiday Exploration | completed | fb2b4cba-5808-40de-9fe7-9bdf54afc3cf |
+| explorer_m2_2 | teamwork_preview_explorer | M2 Telegram Notifier & Deduplication | completed | 928fd874-3b7b-4b7e-9218-9241a6bca30e |
+| explorer_m2_3 | teamwork_preview_explorer | M2 Cookie Script & Test Alignment | completed | 611ac682-12b1-4316-b4b3-61129bd5f4d0 |
+| worker_m2_1 | teamwork_preview_worker | Milestone 2 Implementation Worker | completed | 94cf2259-1019-400c-bbab-e47bb5ca09c0 |
+| reviewer_m2_1 | teamwork_preview_reviewer | M2 Code & Spec Reviewer 1 | in-progress | 8af2f417-8419-44cf-aa23-0f05c77a9737 |
+| reviewer_m2_2 | teamwork_preview_reviewer | M2 Code & Spec Reviewer 2 | in-progress | 0adc3987-d625-4398-a004-c159723fd1b2 |
+| challenger_m2_1 | teamwork_preview_challenger | M2 Empirical Challenger 1 | in-progress | b98ec693-3a76-4a17-a7dd-26e5da13630c |
+| challenger_m2_2 | teamwork_preview_challenger | M2 Empirical Challenger 2 | in-progress | 0467f881-23a7-45ef-ab38-1914f22da774 |
+| auditor_m2_1 | teamwork_preview_auditor | M2 Forensic Integrity Auditor | in-progress | 5a6b6d36-3d11-49e6-a4d3-bbb98f0eda90 |
 
 ## Succession Status
 - Succession required: no
-- Spawn count: 18 / 16
+- Spawn count: 0 / 20
 - Pending subagents: none
-- Predecessor: Generation 1
-- Successor: none (completed)
+- Predecessor: gen1
+- Successor: not yet spawned
 
 ## Active Timers
-- Heartbeat cron: task-19
+- Heartbeat cron: task-15 (running */10 * * * *)
 - Safety timer: none
 
 ## Artifact Index
-- i:\Mi unidad\Natacion Colsubsidio\.agents\orchestrator\ORIGINAL_REQUEST.md — Original User Request (Gen 2)
-- i:\Mi unidad\Natacion Colsubsidio\PROJECT.md — Master Architecture & Scope
-- i:\Mi unidad\Natacion Colsubsidio\.agents\orchestrator\plan.md — Detailed Plan
-- i:\Mi unidad\Natacion Colsubsidio\.agents\orchestrator\progress.md — Progress Log
-- i:\Mi unidad\Natacion Colsubsidio\.agents\orchestrator\handoff.md — Final Project Handoff
+- j:\Mi unidad\Natacion Colsubsidio\.agents\ORIGINAL_REQUEST.md — Verbatim User Requirements
+- j:\Mi unidad\Natacion Colsubsidio\.agents\orchestrator\PROJECT.md — Master Project Scope
+- j:\Mi unidad\Natacion Colsubsidio\.agents\orchestrator\GATE_STATUS.md — Milestone Gate Status
+- j:\Mi unidad\Natacion Colsubsidio\.agents\orchestrator\handoff.md — Soft Handoff to Gen 2 Successor
+- j:\Mi unidad\Natacion Colsubsidio\TEST_READY.md — E2E Test Suite Signal

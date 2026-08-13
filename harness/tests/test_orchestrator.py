@@ -7,14 +7,40 @@ from scraper import SessionExpiredException
 from main import is_within_preferred_schedule, check_venues
 
 def test_is_within_preferred_schedule_weekdays() -> None:
-    """Verifica que el filtro de horarios entre semana (L-V) funcione correctamente."""
+    """Verifica que el filtro de horarios entre semana (L-V) funcione correctamente (< 07:00 ó >= 17:00)."""
     # Lunes regular (2026-06-01) - No festivo
     monday = "2026-06-01"
+    # Turnos < 07:00 permitidos (07:00 no permitido)
+    assert is_within_preferred_schedule(monday, "06:00") is True
+    assert is_within_preferred_schedule(monday, "06:59") is True
+    # Turnos 07:00 - 16:59 NO permitidos
+    assert is_within_preferred_schedule(monday, "07:00") is False
+    assert is_within_preferred_schedule(monday, "12:00") is False
+    assert is_within_preferred_schedule(monday, "16:59") is False
+    # Turnos >= 17:00 permitidos (17:00 permitido)
+    assert is_within_preferred_schedule(monday, "17:00") is True
     assert is_within_preferred_schedule(monday, "18:00") is True
     assert is_within_preferred_schedule(monday, "19:30") is True
     assert is_within_preferred_schedule(monday, "20:00") is True
-    assert is_within_preferred_schedule(monday, "17:59") is False
-    assert is_within_preferred_schedule(monday, "21:00") is False
+    assert is_within_preferred_schedule(monday, "21:00") is True
+    assert is_within_preferred_schedule(monday, "22:00") is True
+
+def test_is_within_preferred_schedule_polymorphic() -> None:
+    """Verifica soporte para entradas polimórficas (datetime, date, str)."""
+    from datetime import datetime, date
+    # Datetime object
+    assert is_within_preferred_schedule(datetime(2026, 6, 1, 6, 30)) is True
+    assert is_within_preferred_schedule(datetime(2026, 6, 1, 10, 0)) is False
+    assert is_within_preferred_schedule(datetime(2026, 6, 1, 18, 0)) is True
+
+    # Date object + time string
+    assert is_within_preferred_schedule(date(2026, 6, 1), "06:30") is True
+    assert is_within_preferred_schedule(date(2026, 6, 1), "10:00") is False
+    assert is_within_preferred_schedule(date(2026, 6, 1), "18:00") is True
+
+    # ISO Datetime string
+    assert is_within_preferred_schedule("2026-06-01T18:00:00") is True
+    assert is_within_preferred_schedule("2026-06-01T10:00:00") is False
 
 def test_is_within_preferred_schedule_holidays() -> None:
     """Verifica que los festivos en Colombia permitan cualquier horario."""
