@@ -41,16 +41,17 @@ class ColsubsidioScraper:
     def update_session_credentials(self, cookies: dict[str, str]) -> None:
         """Actualiza en memoria las cookies (sistema, sitio, Csrf-Token) y los headers (Csrf-Token)."""
         sistema_val = cookies.get("sistema")
-        csrf_val = cookies.get("Csrf-Token") or cookies.get("csrf-token") or cookies.get("CSRF-TOKEN")
-        
+        csrf_val = (
+            cookies.get("Csrf-Token")
+            or cookies.get("csrf-token")
+            or cookies.get("CSRF-TOKEN")
+        )
+
         if sistema_val:
-            self.session.cookies.set("sistema", sistema_val, domain="www.diversioncolsubsidio.com")
-            self.session.cookies.set("sistema", sistema_val, domain=".diversioncolsubsidio.com")
-            self.session.cookies.set("sitio", sistema_val, domain="www.diversioncolsubsidio.com")
-            self.session.cookies.set("sitio", sistema_val, domain=".diversioncolsubsidio.com")
+            self.session.cookies.set("sistema", sistema_val, domain="www.diversioncolsubsidio.com", path="/")
+            self.session.cookies.set("sitio", sistema_val, domain="www.diversioncolsubsidio.com", path="/")
         if csrf_val:
-            self.session.cookies.set("Csrf-Token", csrf_val, domain="www.diversioncolsubsidio.com")
-            self.session.cookies.set("Csrf-Token", csrf_val, domain=".diversioncolsubsidio.com")
+            self.session.cookies.set("Csrf-Token", csrf_val, domain="www.diversioncolsubsidio.com", path="/")
             self.session.headers["Csrf-Token"] = csrf_val
 
     def _renew_session(self, reason: str = "") -> dict[str, str]:
